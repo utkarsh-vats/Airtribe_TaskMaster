@@ -56,8 +56,11 @@ export async function revokeRefreshTokenByHash(tokenHash: string): Promise<void>
     });
 }
 
-export async function revokeAllRefreshTokensForUser(userId: string): Promise<void> {
-    await prisma.refreshToken.updateMany({
+export async function revokeAllRefreshTokensForUser(
+    userId: string,
+    db: Db = prisma,
+): Promise<void> {
+    await db.refreshToken.updateMany({
         where: { userId, revokedAt: null },
         data: { revokedAt: new Date() },
     });

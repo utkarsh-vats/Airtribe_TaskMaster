@@ -20,6 +20,13 @@ export class BadRequestError extends AppError {
     }
 }
 
+/** 400, not 401: a wrong current password must not look like an expired session to clients. */
+export class InvalidCurrentPasswordError extends AppError {
+    constructor(message = 'Current password is incorrect') {
+        super(400, 'INVALID_CURRENT_PASSWORD', message);
+    }
+}
+
 export class UnauthorizedError extends AppError {
     constructor(message = 'Authentication required', code = 'UNAUTHORIZED') {
         super(401, code, message);

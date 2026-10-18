@@ -278,6 +278,13 @@ Flows:
 
 Rate limit `/auth/*` (e.g. 10 requests/min/IP).
 
+**Decisions and known trade-offs**
+
+- **Login accepts any non-empty password** (1–128 chars). The 8–128 policy is enforced only at register and change-password, so a short password at login is just wrong (401 `INVALID_CREDENTIALS`), not a validation error, and tightening the policy later doesn't lock out existing accounts.
+- **Refresh checks expiry before revocation.** A token that is both expired and revoked gets a plain 401 `INVALID_REFRESH_TOKEN` without triggering reuse detection.
+- **Retried refreshes look like reuse.** If a client retries a refresh after the first request already succeeded (e.g. the response was lost), the retry presents a revoked token, so reuse detection revokes all of the user's sessions and they must log in again. Two refreshes that race before either commits are safe: the `revokedAt: null` guard lets exactly one rotate and the other gets 401 without the revoke-all. Clients should serialise refreshes and never retry one with the same token. A short grace window for the just-rotated token is the upgrade path.
+- **Wrong current password on change-password is 400 `INVALID_CURRENT_PASSWORD`**, not 401, so clients don't mistake it for an expired session and start a token refresh.
+
 ---
 
 ## 7. API
@@ -296,13 +303,13 @@ Base path `/api/v1`. All routes except register, login, refresh, and health requ
 
 ### Current user
 
-| Method | Path                    | Notes                                                                       |
-| ------ | ----------------------- | --------------------------------------------------------------------------- |
-| GET    | `/users/me`             | Profile                                                                     |
-| PATCH  | `/users/me`             | `{ name?, bio?, avatarUrl? }` (email change out of scope)                   |
-| PATCH  | `/users/me/password`    | `{ currentPassword, newPassword }` → 204                                    |
-| GET    | `/users/me/tasks`       | Tasks assigned to me across all my projects; same query params as task list |
-| GET    | `/users/me/invitations` | My pending, unexpired invitations                                           |
+| Method | Path                    | Notes                                                                                             |
+| ------ | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| GET    | `/users/me`             | Profile                                                                                           |
+| PATCH  | `/users/me`             | `{ name?, bio?, avatarUrl? }` (email change out of scope)                                         |
+| PATCH  | `/users/me/password`    | `{ currentPassword, newPassword }` → 204; wrong current password → 400 `INVALID_CURRENT_PASSWORD` |
+| GET    | `/users/me/tasks`       | Tasks assigned to me across all my projects; same query params as task list                       |
+| GET    | `/users/me/invitations` | My pending, unexpired invitations                                                                 |
 
 ### Projects
 
@@ -416,7 +423,9 @@ Error:
 | HTTP | `code`                                                   | When                                                                |
 | ---- | -------------------------------------------------------- | ------------------------------------------------------------------- |
 | 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart                                   |
+| 400  | `INVALID_CURRENT_PASSWORD`                               | Change-password with a wrong current password                       |
 | 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                    |
+| 401  | `INVALID_REFRESH_TOKEN`                                  | Refresh token unknown, expired, revoked or reused                   |
 | 403  | `FORBIDDEN`                                              | Member lacks role or row ownership                                  |
 | 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                            |
 | 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving |
