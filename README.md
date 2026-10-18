@@ -37,11 +37,11 @@ npm test
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Start with hot reload |
-| `npm run build` / `npm start` | Compile to `dist/` and run it |
-| `npm run lint` / `npm run format` | ESLint / Prettier |
-| `npm run typecheck` | TypeScript without emitting |
-| `npm run db:migrate` | Create and apply a migration (dev) |
-| `npm run db:studio` | Browse the database in Prisma Studio |
+| Script                            | What it does                         |
+| --------------------------------- | ------------------------------------ |
+| `npm run dev`                     | Start with hot reload                |
+| `npm run build` / `npm start`     | Compile to `dist/` and run it        |
+| `npm run lint` / `npm run format` | ESLint / Prettier                    |
+| `npm run typecheck`               | TypeScript without emitting          |
+| `npm run db:migrate`              | Create and apply a migration (dev)   |
+| `npm run db:studio`               | Browse the database in Prisma Studio |
