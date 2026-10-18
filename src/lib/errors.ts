@@ -56,6 +56,12 @@ export class UnsupportedMediaTypeError extends AppError {
     }
 }
 
+export class TooManyRequestsError extends AppError {
+    constructor(message = 'Too many requests, please try again later') {
+        super(429, 'RATE_LIMITED', message);
+    }
+}
+
 export interface ValidationIssue {
     path: string;
     message: string;
