@@ -39,35 +39,62 @@ Tests are silent by default only while `LOG_LEVEL` is unset, so keep it out of `
 
 Base path `/api/v1`. Implemented so far:
 
-| Method | Path                                                           | Auth                   | Body                                                                      | Success                                                               |
-| ------ | -------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| GET    | `/health` (no base path)                                       | —                      | —                                                                         | 200 `{ status, db }` (503 if the database is down)                    |
-| POST   | `/api/v1/auth/register`                                        | —                      | `{ email, password, name }`                                               | 201 user                                                              |
-| POST   | `/api/v1/auth/login`                                           | —                      | `{ email, password }`                                                     | 200 `{ accessToken, refreshToken, expiresIn, tokenType, user }`       |
-| POST   | `/api/v1/auth/refresh`                                         | —                      | `{ refreshToken }`                                                        | 200 new `{ accessToken, refreshToken, expiresIn, tokenType }`         |
-| POST   | `/api/v1/auth/logout`                                          | —                      | `{ refreshToken }`                                                        | 204                                                                   |
-| POST   | `/api/v1/auth/logout-all`                                      | Bearer                 | —                                                                         | 204                                                                   |
-| GET    | `/api/v1/users/me`                                             | Bearer                 | —                                                                         | 200 user                                                              |
-| PATCH  | `/api/v1/users/me`                                             | Bearer                 | `{ name?, bio?, avatarUrl? }` (at least one; `null` clears bio/avatarUrl) | 200 user                                                              |
-| PATCH  | `/api/v1/users/me/password`                                    | Bearer                 | `{ currentPassword, newPassword }`                                        | 204; signs out every session                                          |
-| GET    | `/api/v1/users/me/invitations`                                 | Bearer                 | —                                                                         | 200 my pending, unexpired invitations, with `project` and `invitedBy` |
-| POST   | `/api/v1/projects`                                             | Bearer                 | `{ name, description? }`                                                  | 201 project; caller becomes OWNER                                     |
-| GET    | `/api/v1/projects?page=&limit=`                                | Bearer                 | —                                                                         | 200 my projects, most recently updated first, paginated               |
-| GET    | `/api/v1/projects/:projectId`                                  | member                 | —                                                                         | 200 project                                                           |
-| PATCH  | `/api/v1/projects/:projectId`                                  | ADMIN+                 | `{ name?, description? }` (at least one)                                  | 200 project                                                           |
-| DELETE | `/api/v1/projects/:projectId`                                  | OWNER                  | —                                                                         | 204; deletes its members, tasks, comments and attachments             |
-| GET    | `/api/v1/projects/:projectId/members`                          | member                 | —                                                                         | 200 members: OWNER, ADMINs, MEMBERs, each by join date                |
-| PATCH  | `/api/v1/projects/:projectId/members/:userId`                  | OWNER                  | `{ role }`; `OWNER` transfers ownership                                   | 200 updated member list                                               |
-| DELETE | `/api/v1/projects/:projectId/members/:userId`                  | member (self) / ADMIN+ | —                                                                         | 204; leave or remove; their open tasks are unassigned                 |
-| POST   | `/api/v1/projects/:projectId/invitations`                      | ADMIN+                 | `{ email, role? }` (`MEMBER` default; `ADMIN` needs OWNER)                | 201 invitation, expires in 7 days                                     |
-| GET    | `/api/v1/projects/:projectId/invitations?status=&page=&limit=` | ADMIN+                 | —                                                                         | 200 invitations, newest first, paginated                              |
-| DELETE | `/api/v1/projects/:projectId/invitations/:invitationId`        | ADMIN+                 | —                                                                         | 204; revokes a pending invitation                                     |
-| POST   | `/api/v1/invitations/:invitationId/accept`                     | invitee                | —                                                                         | 200 `{ projectId, role }`; you become a member                        |
-| POST   | `/api/v1/invitations/:invitationId/decline`                    | invitee                | —                                                                         | 204                                                                   |
+| Method | Path                                                           | Auth                        | Body                                                                      | Success                                                                                                                 |
+| ------ | -------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/health` (no base path)                                       | —                           | —                                                                         | 200 `{ status, db }` (503 if the database is down)                                                                      |
+| POST   | `/api/v1/auth/register`                                        | —                           | `{ email, password, name }`                                               | 201 user                                                                                                                |
+| POST   | `/api/v1/auth/login`                                           | —                           | `{ email, password }`                                                     | 200 `{ accessToken, refreshToken, expiresIn, tokenType, user }`                                                         |
+| POST   | `/api/v1/auth/refresh`                                         | —                           | `{ refreshToken }`                                                        | 200 new `{ accessToken, refreshToken, expiresIn, tokenType }`                                                           |
+| POST   | `/api/v1/auth/logout`                                          | —                           | `{ refreshToken }`                                                        | 204                                                                                                                     |
+| POST   | `/api/v1/auth/logout-all`                                      | Bearer                      | —                                                                         | 204                                                                                                                     |
+| GET    | `/api/v1/users/me`                                             | Bearer                      | —                                                                         | 200 user                                                                                                                |
+| PATCH  | `/api/v1/users/me`                                             | Bearer                      | `{ name?, bio?, avatarUrl? }` (at least one; `null` clears bio/avatarUrl) | 200 user                                                                                                                |
+| PATCH  | `/api/v1/users/me/password`                                    | Bearer                      | `{ currentPassword, newPassword }`                                        | 204; signs out every session                                                                                            |
+| GET    | `/api/v1/users/me/invitations`                                 | Bearer                      | —                                                                         | 200 my pending, unexpired invitations, with `project` and `invitedBy`                                                   |
+| GET    | `/api/v1/users/me/tasks`                                       | Bearer                      | —                                                                         | 200 tasks assigned to me across my projects, with `project { id, name }`; same query as the task list except `assignee` |
+| POST   | `/api/v1/projects`                                             | Bearer                      | `{ name, description? }`                                                  | 201 project; caller becomes OWNER                                                                                       |
+| GET    | `/api/v1/projects?page=&limit=`                                | Bearer                      | —                                                                         | 200 my projects, most recently updated first, paginated                                                                 |
+| GET    | `/api/v1/projects/:projectId`                                  | member                      | —                                                                         | 200 project                                                                                                             |
+| PATCH  | `/api/v1/projects/:projectId`                                  | ADMIN+                      | `{ name?, description? }` (at least one)                                  | 200 project                                                                                                             |
+| DELETE | `/api/v1/projects/:projectId`                                  | OWNER                       | —                                                                         | 204; deletes its members, tasks, comments and attachments                                                               |
+| GET    | `/api/v1/projects/:projectId/members`                          | member                      | —                                                                         | 200 members: OWNER, ADMINs, MEMBERs, each by join date                                                                  |
+| PATCH  | `/api/v1/projects/:projectId/members/:userId`                  | OWNER                       | `{ role }`; `OWNER` transfers ownership                                   | 200 updated member list                                                                                                 |
+| DELETE | `/api/v1/projects/:projectId/members/:userId`                  | member (self) / ADMIN+      | —                                                                         | 204; leave or remove; their open tasks are unassigned                                                                   |
+| POST   | `/api/v1/projects/:projectId/invitations`                      | ADMIN+                      | `{ email, role? }` (`MEMBER` default; `ADMIN` needs OWNER)                | 201 invitation, expires in 7 days                                                                                       |
+| GET    | `/api/v1/projects/:projectId/invitations?status=&page=&limit=` | ADMIN+                      | —                                                                         | 200 invitations, newest first, paginated                                                                                |
+| DELETE | `/api/v1/projects/:projectId/invitations/:invitationId`        | ADMIN+                      | —                                                                         | 204; revokes a pending invitation                                                                                       |
+| POST   | `/api/v1/invitations/:invitationId/accept`                     | invitee                     | —                                                                         | 200 `{ projectId, role }`; you become a member                                                                          |
+| POST   | `/api/v1/invitations/:invitationId/decline`                    | invitee                     | —                                                                         | 204                                                                                                                     |
+| POST   | `/api/v1/projects/:projectId/tasks`                            | member                      | `{ title, description?, dueDate?, priority?, assigneeId? }`               | 201 task; starts `OPEN`, priority `MEDIUM` by default                                                                   |
+| GET    | `/api/v1/projects/:projectId/tasks`                            | member                      | —                                                                         | 200 tasks, filtered, sorted and paginated (see below)                                                                   |
+| GET    | `/api/v1/projects/:projectId/tasks/:taskId`                    | member                      | —                                                                         | 200 task with `assignee`, `createdBy`, `commentCount`, `attachmentCount`                                                |
+| PATCH  | `/api/v1/projects/:projectId/tasks/:taskId`                    | creator, assignee or ADMIN+ | any of `title, description, dueDate, priority, status, assigneeId`        | 200 task; `{ "status": "COMPLETED" }` completes it                                                                      |
+| DELETE | `/api/v1/projects/:projectId/tasks/:taskId`                    | creator or ADMIN+           | —                                                                         | 204; deletes its comments and attachments                                                                               |
 
 A project in a response has `id, name, description, createdAt, updatedAt, myRole, memberCount`; single-project responses add `owner: { id, name, email }`. Pagination: `page` ≥ 1 (default 1), `limit` 1–100 (default 20).
 
-Tasks, comments and attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
+Dates are ISO 8601 with an offset (`2026-10-25T17:00:00Z` or `…+05:30`). `assigneeId` must be a member of the project (422 otherwise); `null` unassigns.
+
+#### Task list query
+
+`GET /projects/:projectId/tasks` and `GET /users/me/tasks` take the same query parameters (`/users/me/tasks` rejects `assignee`). Unknown parameters and invalid values return 422.
+
+| Param                   | Example                        | Meaning                                                                                            |
+| ----------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `status`                | `OPEN,IN_PROGRESS`             | comma list of `OPEN`, `IN_PROGRESS`, `COMPLETED`                                                   |
+| `priority`              | `HIGH,URGENT`                  | comma list of `LOW`, `MEDIUM`, `HIGH`, `URGENT`                                                    |
+| `assignee`              | `me` / `unassigned` / `<uuid>` |                                                                                                    |
+| `createdBy`             | `me` / `<uuid>`                |                                                                                                    |
+| `dueBefore`, `dueAfter` | `2026-10-25T00:00:00Z`         | due strictly before / after                                                                        |
+| `overdue`               | `true` / `false`               | `true`: past due and not completed; `false`: everything else                                       |
+| `q`                     | `login bug`                    | case-insensitive match in title or description                                                     |
+| `sort`                  | `dueDate`                      | `dueDate`, `createdAt` (default), `updatedAt`, `priority`, `title`                                 |
+| `order`                 | `asc` / `desc`                 | defaults: `dueDate` asc, `createdAt`/`updatedAt` desc, `priority` desc (URGENT first), `title` asc |
+| `page`, `limit`         | `1`, `20`                      | `limit` max 100                                                                                    |
+
+Tasks without a due date always sort last. Example: `GET /api/v1/projects/:projectId/tasks?status=OPEN,IN_PROGRESS&assignee=me&sort=dueDate`.
+
+Comments and attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
 
 ### Permissions
 
@@ -75,6 +102,7 @@ Every project has exactly one OWNER; other members are ADMIN or MEMBER. Anyone w
 
 - **Roles:** only the OWNER changes roles, and nobody can change their own (409). Setting someone's role to `OWNER` transfers ownership: the current owner becomes ADMIN in the same transaction.
 - **Leaving and removal:** any member can leave except the OWNER, who must transfer ownership first (409). ADMINs can remove MEMBERs; the OWNER can remove ADMINs and MEMBERs. A removed or departing member's open tasks are unassigned; completed tasks, comments and attachments stay.
+- **Tasks:** any member can create tasks and read everything in the project. A task can be updated by its creator, its assignee or an ADMIN+, and deleted by its creator or an ADMIN+. Completing a task records `completedAt`; reopening clears it.
 - **Invitations** go to an email address, so the invitee doesn't need an account yet: they see the invite under `/users/me/invitations` once registered with that email. ADMINs can invite MEMBERs; only the OWNER can invite ADMINs. One pending invitation per email per project (409 otherwise), and none for existing members (409).
 - **Expiry** is checked when used: a pending invitation past its expiry date shows as `EXPIRED` in lists and filters, and accepting or declining it returns 410 `INVITATION_EXPIRED`. Accepting someone else's invitation returns 404, so its existence isn't revealed.
 
@@ -93,18 +121,18 @@ Success bodies are `{ "data": ... }`, plus `"meta": { page, limit, total, totalP
 }
 ```
 
-| HTTP | `code`                                                                                      |
-| ---- | ------------------------------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST` (malformed JSON)                                                              |
-| 400  | `INVALID_CURRENT_PASSWORD` (change password; not 401, so clients don't try a token refresh) |
-| 401  | `UNAUTHORIZED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_REFRESH_TOKEN`             |
-| 403  | `FORBIDDEN` (project member without the required role)                                      |
-| 404  | `NOT_FOUND` (also for projects you're not a member of)                                      |
-| 409  | `CONFLICT` (e.g. email already registered, already a member, invitation no longer pending)  |
-| 410  | `INVITATION_EXPIRED` (accepting or declining an expired invitation)                         |
-| 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too)            |
-| 429  | `RATE_LIMITED`                                                                              |
-| 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                            |
+| HTTP | `code`                                                                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST` (malformed JSON)                                                                                                  |
+| 400  | `INVALID_CURRENT_PASSWORD` (change password; not 401, so clients don't try a token refresh)                                     |
+| 401  | `UNAUTHORIZED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_REFRESH_TOKEN`                                                 |
+| 403  | `FORBIDDEN` (project member without the required role)                                                                          |
+| 404  | `NOT_FOUND` (also for projects you're not a member of)                                                                          |
+| 409  | `CONFLICT` (e.g. email already registered, already a member, invitation no longer pending, task status changed by someone else) |
+| 410  | `INVITATION_EXPIRED` (accepting or declining an expired invitation)                                                             |
+| 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too)                                                |
+| 429  | `RATE_LIMITED`                                                                                                                  |
+| 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                                                                |
 
 Every response carries an `X-Request-Id` header (an incoming one is reused), matching `requestId` in errors and the logs.
 
