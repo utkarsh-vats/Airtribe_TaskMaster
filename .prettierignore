@@ -5,3 +5,6 @@ uploads
 tmp
 package-lock.json
 prisma/migrations
+
+# Personal scratch notes
+docs/ToBeAdded.md
