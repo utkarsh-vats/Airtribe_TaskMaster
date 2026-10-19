@@ -31,6 +31,8 @@ npm run test:db               # apply migrations to the test database (after any
 npm test
 ```
 
+Set LOG_LEVEL=error to see server errors while running tests (e.g. `$env:LOG_LEVEL='error'; npm test` in PowerShell).
+
 ## API
 
 Base path `/api/v1`. Implemented so far:
