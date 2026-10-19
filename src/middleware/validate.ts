@@ -11,10 +11,13 @@ const PARTS: readonly RequestPart[] = ['body', 'params', 'query'];
  * Parses the given request parts with Zod and stores the results on `req.validated`.
  * Express 5's `req.query` is a read-only getter, so the originals are left untouched.
  * A failure is passed to the error middleware as a ZodError (→ 422 VALIDATION_ERROR).
+ *
+ * Parts validated by an earlier `validate()` in the chain (e.g. the project-scoped router's
+ * `projectId` param) are kept; a later schema for the same part replaces that part.
  */
 export function validate(schemas: PartSchemas): RequestHandler {
     return (req, _res, next) => {
-        const validated: NonNullable<Request['validated']> = {};
+        const validated: NonNullable<Request['validated']> = { ...req.validated };
 
         for (const part of PARTS) {
             const schema = schemas[part];

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Project, ProjectRole } from '@prisma/client';
 import type { Express } from 'express';
 import request from 'supertest';
 import { prisma } from '../../src/db/prisma';
@@ -35,4 +36,27 @@ export async function loginAs(app: Express, user: TestUser): Promise<AuthTokens>
     }
     const { accessToken, refreshToken, expiresIn, tokenType } = res.body.data as AuthTokens;
     return { accessToken, refreshToken, expiresIn, tokenType };
+}
+
+/** A project owned by `owner`, with the OWNER membership row, like POST /projects creates. */
+export function createProject(
+    owner: { id: string },
+    overrides: { name?: string; description?: string | null } = {},
+): Promise<Project> {
+    return prisma.project.create({
+        data: {
+            name: overrides.name ?? `Project ${randomUUID().slice(0, 8)}`,
+            description: overrides.description ?? null,
+            createdById: owner.id,
+            members: { create: { userId: owner.id, role: 'OWNER' } },
+        },
+    });
+}
+
+export async function addMember(
+    projectId: string,
+    userId: string,
+    role: ProjectRole = 'MEMBER',
+): Promise<void> {
+    await prisma.projectMember.create({ data: { projectId, userId, role } });
 }
