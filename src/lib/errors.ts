@@ -51,6 +51,12 @@ export class ConflictError extends AppError {
     }
 }
 
+export class GoneError extends AppError {
+    constructor(message = 'This resource is no longer available', code = 'GONE') {
+        super(410, code, message);
+    }
+}
+
 export class PayloadTooLargeError extends AppError {
     constructor(message = 'Payload too large') {
         super(413, 'PAYLOAD_TOO_LARGE', message);

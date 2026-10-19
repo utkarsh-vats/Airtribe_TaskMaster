@@ -1,15 +1,21 @@
 import { Router } from 'express';
 import { authRouter } from './modules/auth/auth.routes';
-import { projectsRouter } from './modules/projects/projects.routes';
+import { invitationsRouter, projectInvitationsRouter } from './modules/members/invitations.routes';
+import { membersRouter } from './modules/members/members.routes';
+import { projectScopedRouter, projectsRouter } from './modules/projects/projects.routes';
 import { usersRouter } from './modules/users/users.routes';
 
 /**
  * Every feature router is mounted here under /api/v1.
- * Project sub-resources (members, tasks, ...) attach to `projectScopedRouter` in
- * modules/projects/projects.routes.ts instead.
+ * Project sub-resources attach to `projectScopedRouter`, which already runs authenticate →
+ * validate(projectId) → loadMembership.
  */
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/projects', projectsRouter);
+apiRouter.use('/invitations', invitationsRouter);
+
+projectScopedRouter.use('/members', membersRouter);
+projectScopedRouter.use('/invitations', projectInvitationsRouter);

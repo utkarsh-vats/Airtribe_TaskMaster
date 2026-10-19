@@ -198,6 +198,8 @@ erDiagram
 - One-owner partial unique index (Appendix B).
 - Removing a member (or a member leaving) unassigns their open tasks in the same transaction. Their comments and attachments stay.
 - The OWNER cannot leave or be removed; ownership must be transferred first (`PATCH member role` to OWNER demotes the current owner to ADMIN in one transaction).
+- Transfer order: demote the current owner to ADMIN **first**, then promote the target. The one-owner partial unique index is checked per statement, so promoting first fails even inside the transaction. The demotion is guarded on `role = OWNER` so a concurrent transfer gets 409.
+- Nobody can change their own role (409); the OWNER changes others' roles or transfers ownership.
 
 ### project_invitations
 
@@ -205,7 +207,10 @@ erDiagram
 - Only one PENDING invitation per `(project_id, email)` (partial unique index).
 - Expiry is checked lazily: a PENDING invitation past `expires_at` is treated as EXPIRED. Before creating a new invite, mark stale pending rows for the same pair as EXPIRED so the unique index doesn't block it.
 - Cannot invite someone who is already a member (409). Role OWNER is not allowed in invitations.
+- Only the OWNER may invite with role ADMIN (ADMIN inviting an ADMIN → 403), so granting ADMIN stays owner-only, same as changing roles.
 - Accept: in one transaction, set status ACCEPTED + `responded_at`, insert into `project_members`.
+- Accept/decline checks, in order: invitation email ≠ caller's email → 404 (existence not revealed); not PENDING → 409; past `expires_at` → 410 `INVITATION_EXPIRED`; (accept only) already a member → 409. The status change is an `updateMany` guarded on `status = PENDING`, so only one of two concurrent responses wins.
+- Revoke: only an unexpired PENDING invitation can be revoked (else 409); `responded_at` stays null because the invitee didn't respond.
 
 ### tasks
 
@@ -244,6 +249,7 @@ Non-members get **404** on any project resource, so project existence is not lea
 | Update project name/description                     |         ❌          |   ✅   |         ✅          |
 | Delete project                                      |         ❌          |   ❌   |         ✅          |
 | Invite / revoke invitations                         |         ❌          |   ✅   |         ✅          |
+| Invite with role ADMIN                              |         ❌          |   ❌   |         ✅          |
 | Remove a MEMBER                                     |         ❌          |   ✅   |         ✅          |
 | Remove an ADMIN, change roles, transfer ownership   |         ❌          |   ❌   |         ✅          |
 | Leave project                                       |         ✅          |   ✅   | ❌ (transfer first) |
@@ -323,16 +329,16 @@ Base path `/api/v1`. All routes except register, login, refresh, and health requ
 
 ### Members and invitations
 
-| Method | Path                                             | Role                                   |
-| ------ | ------------------------------------------------ | -------------------------------------- |
-| GET    | `/projects/:projectId/members`                   | member                                 |
-| PATCH  | `/projects/:projectId/members/:userId`           | OWNER (`{ role }`; `OWNER` = transfer) |
-| DELETE | `/projects/:projectId/members/:userId`           | ADMIN+ to remove; self to leave        |
-| POST   | `/projects/:projectId/invitations`               | ADMIN+ (`{ email, role }`)             |
-| GET    | `/projects/:projectId/invitations`               | ADMIN+ (`?status=`)                    |
-| DELETE | `/projects/:projectId/invitations/:invitationId` | ADMIN+ (sets REVOKED)                  |
-| POST   | `/invitations/:invitationId/accept`              | invitee (email must match)             |
-| POST   | `/invitations/:invitationId/decline`             | invitee                                |
+| Method | Path                                             | Role                                                   |
+| ------ | ------------------------------------------------ | ------------------------------------------------------ |
+| GET    | `/projects/:projectId/members`                   | member                                                 |
+| PATCH  | `/projects/:projectId/members/:userId`           | OWNER (`{ role }`; `OWNER` = transfer; own role → 409) |
+| DELETE | `/projects/:projectId/members/:userId`           | ADMIN+ to remove; self to leave                        |
+| POST   | `/projects/:projectId/invitations`               | ADMIN+ (`{ email, role }`; role ADMIN: OWNER only)     |
+| GET    | `/projects/:projectId/invitations`               | ADMIN+ (`?status=`)                                    |
+| DELETE | `/projects/:projectId/invitations/:invitationId` | ADMIN+ (sets REVOKED)                                  |
+| POST   | `/invitations/:invitationId/accept`              | invitee (email must match)                             |
+| POST   | `/invitations/:invitationId/decline`             | invitee                                                |
 
 ### Tasks
 
@@ -420,21 +426,22 @@ Error:
 }
 ```
 
-| HTTP | `code`                                                   | When                                                                |
-| ---- | -------------------------------------------------------- | ------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart                                   |
-| 400  | `INVALID_CURRENT_PASSWORD`                               | Change-password with a wrong current password                       |
-| 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                    |
-| 401  | `INVALID_REFRESH_TOKEN`                                  | Refresh token unknown, expired, revoked or reused                   |
-| 403  | `FORBIDDEN`                                              | Member lacks role or row ownership                                  |
-| 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                            |
-| 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving |
-| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over limit                                                   |
-| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | MIME not allowed                                                    |
-| 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                               |
-| 429  | `RATE_LIMITED`                                           | Rate limit hit                                                      |
-| 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)       |
-| 503  | `AI_DISABLED`                                            | AI endpoint without a key                                           |
+| HTTP | `code`                                                   | When                                                                                                                 |
+| ---- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart                                                                                    |
+| 400  | `INVALID_CURRENT_PASSWORD`                               | Change-password with a wrong current password                                                                        |
+| 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                                                                     |
+| 401  | `INVALID_REFRESH_TOKEN`                                  | Refresh token unknown, expired, revoked or reused                                                                    |
+| 403  | `FORBIDDEN`                                              | Member lacks role or row ownership                                                                                   |
+| 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                                                                             |
+| 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving, changing own role, invitation no longer pending |
+| 410  | `INVITATION_EXPIRED`                                     | Accepting or declining an invitation past `expires_at`                                                               |
+| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over limit                                                                                                    |
+| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | MIME not allowed                                                                                                     |
+| 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                                                                                |
+| 429  | `RATE_LIMITED`                                           | Rate limit hit                                                                                                       |
+| 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)                                                        |
+| 503  | `AI_DISABLED`                                            | AI endpoint without a key                                                                                            |
 
 Implementation: an `AppError` base class with subclasses (`NotFoundError`, `ForbiddenError`, `ConflictError`, …). The error middleware maps `AppError`, `ZodError`, multer errors, and Prisma `P2002` (unique violation → 409) / `P2025` (not found → 404); everything else is 500.
 
@@ -543,7 +550,7 @@ taskmaster/
   - Auth: register duplicate → 409; login wrong password → 401; refresh rotation; reused refresh token revokes all; logout then refresh → 401.
   - Permissions: non-member → 404; MEMBER deleting someone else's task → 403; ADMIN removing ADMIN → 403; owner leaving → 409.
   - Tasks: assign to non-member → 422/409; complete sets `completed_at`; reopen clears it; each filter, sort, `q`, pagination meta; `/users/me/tasks` spans projects.
-  - Invitations: duplicate pending → 409; accept adds membership; wrong user accepting → 404; expired → 410 or 409 (pick one, document it).
+  - Invitations: duplicate pending → 409; accept adds membership; wrong user accepting → 404; expired → 410 `INVITATION_EXPIRED`.
   - Comments/attachments: `taskId` from another project → 404; oversize upload → 413; bad MIME → 415.
   - Member removal unassigns their tasks.
 - **CI:** GitHub Actions with a `postgres:18.3` service container → install → `prisma migrate deploy` → lint → typecheck → test.

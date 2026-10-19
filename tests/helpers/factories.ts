@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Project, ProjectRole } from '@prisma/client';
+import type { InvitationStatus, Project, ProjectInvitation, ProjectRole } from '@prisma/client';
 import type { Express } from 'express';
 import request from 'supertest';
 import { prisma } from '../../src/db/prisma';
@@ -38,6 +38,11 @@ export async function loginAs(app: Express, user: TestUser): Promise<AuthTokens>
     return { accessToken, refreshToken, expiresIn, tokenType };
 }
 
+/** `Authorization` header value for `user`, via a real login. */
+export async function authHeader(app: Express, user: TestUser): Promise<string> {
+    return `Bearer ${(await loginAs(app, user)).accessToken}`;
+}
+
 /** A project owned by `owner`, with the OWNER membership row, like POST /projects creates. */
 export function createProject(
     owner: { id: string },
@@ -59,4 +64,29 @@ export async function addMember(
     role: ProjectRole = 'MEMBER',
 ): Promise<void> {
     await prisma.projectMember.create({ data: { projectId, userId, role } });
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** An invitation row, PENDING and expiring in 7 days unless overridden. */
+export function createInvitation(
+    projectId: string,
+    invitedById: string,
+    overrides: {
+        email?: string;
+        role?: Exclude<ProjectRole, 'OWNER'>;
+        status?: InvitationStatus;
+        expiresAt?: Date;
+    } = {},
+): Promise<ProjectInvitation> {
+    return prisma.projectInvitation.create({
+        data: {
+            projectId,
+            invitedById,
+            email: overrides.email ?? `invitee-${randomUUID()}@example.com`,
+            role: overrides.role ?? 'MEMBER',
+            status: overrides.status ?? 'PENDING',
+            expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * DAY_MS),
+        },
+    });
 }
