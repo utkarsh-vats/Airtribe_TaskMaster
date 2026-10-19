@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import type { InvitationStatus, Project, ProjectInvitation, ProjectRole } from '@prisma/client';
+import type {
+    InvitationStatus,
+    Project,
+    ProjectInvitation,
+    ProjectRole,
+    Task,
+    TaskPriority,
+    TaskStatus,
+} from '@prisma/client';
 import type { Express } from 'express';
 import request from 'supertest';
 import { prisma } from '../../src/db/prisma';
@@ -87,6 +95,37 @@ export function createInvitation(
             role: overrides.role ?? 'MEMBER',
             status: overrides.status ?? 'PENDING',
             expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * DAY_MS),
+        },
+    });
+}
+
+/** A task in `projectId`. A COMPLETED status gets a completedAt, as the CHECK constraint requires. */
+export function createTask(
+    projectId: string,
+    createdById: string,
+    overrides: {
+        title?: string;
+        description?: string | null;
+        status?: TaskStatus;
+        priority?: TaskPriority;
+        dueDate?: Date | null;
+        assigneeId?: string | null;
+        createdAt?: Date;
+    } = {},
+): Promise<Task> {
+    const status = overrides.status ?? 'OPEN';
+    return prisma.task.create({
+        data: {
+            projectId,
+            createdById,
+            title: overrides.title ?? `Task ${randomUUID().slice(0, 8)}`,
+            description: overrides.description ?? null,
+            status,
+            completedAt: status === 'COMPLETED' ? new Date() : null,
+            priority: overrides.priority ?? 'MEDIUM',
+            dueDate: overrides.dueDate ?? null,
+            assigneeId: overrides.assigneeId ?? null,
+            ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
         },
     });
 }

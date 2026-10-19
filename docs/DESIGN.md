@@ -342,28 +342,34 @@ Base path `/api/v1`. All routes except register, login, refresh, and health requ
 
 ### Tasks
 
-| Method | Path                                 | Notes                                                                                                                                  |
-| ------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/projects/:projectId/tasks`         | `{ title, description?, dueDate?, priority?, assigneeId? }`                                                                            |
-| GET    | `/projects/:projectId/tasks`         | filter/sort/search/paginate (below)                                                                                                    |
-| GET    | `/projects/:projectId/tasks/:taskId` | includes assignee and creator summaries, comment and attachment counts                                                                 |
-| PATCH  | `/projects/:projectId/tasks/:taskId` | any of `title, description, dueDate, priority, status, assigneeId` (`null` unassigns). Completing a task = `{ "status": "COMPLETED" }` |
-| DELETE | `/projects/:projectId/tasks/:taskId` | 204                                                                                                                                    |
+| Method | Path                                 | Notes                                                                                                                                                       |
+| ------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/tasks`         | `{ title, description?, dueDate?, priority?, assigneeId? }`; no `status` (starts OPEN), `priority` defaults to MEDIUM, `dueDate` is ISO 8601 with an offset |
+| GET    | `/projects/:projectId/tasks`         | filter/sort/search/paginate (below)                                                                                                                         |
+| GET    | `/projects/:projectId/tasks/:taskId` | includes assignee and creator summaries, comment and attachment counts                                                                                      |
+| PATCH  | `/projects/:projectId/tasks/:taskId` | any of `title, description, dueDate, priority, status, assigneeId` (`null` unassigns). Completing a task = `{ "status": "COMPLETED" }`                      |
+| DELETE | `/projects/:projectId/tasks/:taskId` | 204                                                                                                                                                         |
+
+- `assigneeId` (create or update) must be a current member of this project, else **422** `VALIDATION_ERROR` with `details[].path = "assigneeId"`.
+- PATCH and DELETE check, in order: membership (404) → task belongs to this project (404) → permission (403) → body (422). The task is loaded and authorised before the body is validated, so a forbidden caller never learns about body rules.
+- Completion: entering COMPLETED sets `completed_at = now()`, leaving it clears it, and a PATCH that keeps it COMPLETED keeps the original timestamp. A PATCH that sends `status` only applies if the status hasn't changed since it was read, otherwise **409**, so status and `completed_at` can't disagree under concurrent edits.
 
 **Task list query params**
 
-| Param                   | Example                        | Meaning                                                             |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------- |
-| `status`                | `OPEN,IN_PROGRESS`             | comma list                                                          |
-| `priority`              | `HIGH,URGENT`                  | comma list                                                          |
-| `assignee`              | `me` / `unassigned` / `<uuid>` |                                                                     |
-| `createdBy`             | `me` / `<uuid>`                |                                                                     |
-| `dueBefore`, `dueAfter` | ISO 8601                       |                                                                     |
-| `overdue`               | `true`                         | `due_date < now()` and not completed                                |
-| `q`                     | `login bug`                    | case-insensitive substring match on title or description            |
-| `sort`                  | `dueDate`                      | one of `dueDate, createdAt, updatedAt, priority, title` (whitelist) |
-| `order`                 | `asc` / `desc`                 | default `desc` for timestamps; due dates always sort nulls last     |
-| `page`, `limit`         | `1`, `20`                      | limit max 100                                                       |
+| Param                   | Example                        | Meaning                                                                                                                                                                                                 |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                | `OPEN,IN_PROGRESS`             | comma list                                                                                                                                                                                              |
+| `priority`              | `HIGH,URGENT`                  | comma list                                                                                                                                                                                              |
+| `assignee`              | `me` / `unassigned` / `<uuid>` | not accepted on `/users/me/tasks` (422)                                                                                                                                                                 |
+| `createdBy`             | `me` / `<uuid>`                |                                                                                                                                                                                                         |
+| `dueBefore`, `dueAfter` | ISO 8601 with offset           | exclusive: `due_date <` / `>` the value                                                                                                                                                                 |
+| `overdue`               | `true` / `false`               | `true`: `due_date < now()` and not completed; `false`: the complement (undated, not yet due, or completed). Any other value → 422                                                                       |
+| `q`                     | `login bug`                    | case-insensitive substring match on title or description                                                                                                                                                |
+| `sort`                  | `dueDate`                      | one of `dueDate, createdAt, updatedAt, priority, title` (whitelist)                                                                                                                                     |
+| `order`                 | `asc` / `desc`                 | default per field: `dueDate` asc, `createdAt` desc, `updatedAt` desc, `priority` desc (URGENT first), `title` asc. Default sort is `createdAt` desc. Due dates always sort nulls last; `id` breaks ties |
+| `page`, `limit`         | `1`, `20`                      | limit max 100                                                                                                                                                                                           |
+
+Unknown params and invalid values → 422. `GET /users/me/tasks` takes the same params except `assignee`; its items also include `project { id, name }`. List items carry `assignee { id, name } | null` and `createdBy { id, name }`.
 
 ### Comments
 

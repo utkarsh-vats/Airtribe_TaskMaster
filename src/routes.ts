@@ -3,6 +3,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import { invitationsRouter, projectInvitationsRouter } from './modules/members/invitations.routes';
 import { membersRouter } from './modules/members/members.routes';
 import { projectScopedRouter, projectsRouter } from './modules/projects/projects.routes';
+import { tasksRouter } from './modules/tasks/tasks.routes';
 import { usersRouter } from './modules/users/users.routes';
 
 /**
@@ -19,3 +20,4 @@ apiRouter.use('/invitations', invitationsRouter);
 
 projectScopedRouter.use('/members', membersRouter);
 projectScopedRouter.use('/invitations', projectInvitationsRouter);
+projectScopedRouter.use('/tasks', tasksRouter);
