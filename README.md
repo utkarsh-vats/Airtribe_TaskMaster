@@ -33,20 +33,36 @@ npm test
 
 Set LOG_LEVEL=error to see server errors while running tests (e.g. `$env:LOG_LEVEL='error'; npm test` in PowerShell).
 
+Tests are silent by default only while `LOG_LEVEL` is unset, so keep it out of `.env` (it defaults to `info` for the dev server anyway). Under `NODE_ENV=test`, passwords are hashed with the cheapest argon2id parameters the library allows to keep the suite fast; other environments use the library defaults.
+
 ## API
 
 Base path `/api/v1`. Implemented so far:
 
-| Method | Path                      | Auth   | Body                        | Success                                                         |
-| ------ | ------------------------- | ------ | --------------------------- | --------------------------------------------------------------- |
-| GET    | `/health` (no base path)  | —      | —                           | 200 `{ status, db }` (503 if the database is down)              |
-| POST   | `/api/v1/auth/register`   | —      | `{ email, password, name }` | 201 user                                                        |
-| POST   | `/api/v1/auth/login`      | —      | `{ email, password }`       | 200 `{ accessToken, refreshToken, expiresIn, tokenType, user }` |
-| POST   | `/api/v1/auth/refresh`    | —      | `{ refreshToken }`          | 200 new `{ accessToken, refreshToken, expiresIn, tokenType }`   |
-| POST   | `/api/v1/auth/logout`     | —      | `{ refreshToken }`          | 204                                                             |
-| POST   | `/api/v1/auth/logout-all` | Bearer | —                           | 204                                                             |
+| Method | Path                            | Auth   | Body                                                                      | Success                                                         |
+| ------ | ------------------------------- | ------ | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| GET    | `/health` (no base path)        | —      | —                                                                         | 200 `{ status, db }` (503 if the database is down)              |
+| POST   | `/api/v1/auth/register`         | —      | `{ email, password, name }`                                               | 201 user                                                        |
+| POST   | `/api/v1/auth/login`            | —      | `{ email, password }`                                                     | 200 `{ accessToken, refreshToken, expiresIn, tokenType, user }` |
+| POST   | `/api/v1/auth/refresh`          | —      | `{ refreshToken }`                                                        | 200 new `{ accessToken, refreshToken, expiresIn, tokenType }`   |
+| POST   | `/api/v1/auth/logout`           | —      | `{ refreshToken }`                                                        | 204                                                             |
+| POST   | `/api/v1/auth/logout-all`       | Bearer | —                                                                         | 204                                                             |
+| GET    | `/api/v1/users/me`              | Bearer | —                                                                         | 200 user                                                        |
+| PATCH  | `/api/v1/users/me`              | Bearer | `{ name?, bio?, avatarUrl? }` (at least one; `null` clears bio/avatarUrl) | 200 user                                                        |
+| PATCH  | `/api/v1/users/me/password`     | Bearer | `{ currentPassword, newPassword }`                                        | 204; signs out every session                                    |
+| POST   | `/api/v1/projects`              | Bearer | `{ name, description? }`                                                  | 201 project; caller becomes OWNER                               |
+| GET    | `/api/v1/projects?page=&limit=` | Bearer | —                                                                         | 200 my projects, most recently updated first, paginated         |
+| GET    | `/api/v1/projects/:projectId`   | member | —                                                                         | 200 project                                                     |
+| PATCH  | `/api/v1/projects/:projectId`   | ADMIN+ | `{ name?, description? }` (at least one)                                  | 200 project                                                     |
+| DELETE | `/api/v1/projects/:projectId`   | OWNER  | —                                                                         | 204; deletes its members, tasks, comments and attachments       |
 
-Projects, members, tasks, comments and attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
+A project in a response has `id, name, description, createdAt, updatedAt, myRole, memberCount`; single-project responses add `owner: { id, name, email }`. Pagination: `page` ≥ 1 (default 1), `limit` 1–100 (default 20).
+
+Members, invitations, tasks, comments and attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
+
+### Permissions
+
+Every project has exactly one OWNER; other members are ADMIN or MEMBER. Anyone who isn't a member gets **404** for the project and everything under it, so its existence isn't leaked. A member whose role is too low gets **403**. The full matrix is in [DESIGN.md §5](docs/DESIGN.md#5-roles-and-permissions).
 
 ### Responses and errors
 
@@ -63,15 +79,17 @@ Success bodies are `{ "data": ... }`, plus `"meta": { page, limit, total, totalP
 }
 ```
 
-| HTTP | `code`                                                                           |
-| ---- | -------------------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST` (malformed JSON)                                                   |
-| 401  | `UNAUTHORIZED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_REFRESH_TOKEN`  |
-| 404  | `NOT_FOUND`                                                                      |
-| 409  | `CONFLICT` (e.g. email already registered)                                       |
-| 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too) |
-| 429  | `RATE_LIMITED`                                                                   |
-| 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                 |
+| HTTP | `code`                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST` (malformed JSON)                                                              |
+| 400  | `INVALID_CURRENT_PASSWORD` (change password; not 401, so clients don't try a token refresh) |
+| 401  | `UNAUTHORIZED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_REFRESH_TOKEN`             |
+| 403  | `FORBIDDEN` (project member without the required role)                                      |
+| 404  | `NOT_FOUND` (also for projects you're not a member of)                                      |
+| 409  | `CONFLICT` (e.g. email already registered)                                                  |
+| 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too)            |
+| 429  | `RATE_LIMITED`                                                                              |
+| 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                            |
 
 Every response carries an `X-Request-Id` header (an incoming one is reused), matching `requestId` in errors and the logs.
 
@@ -83,6 +101,7 @@ Every response carries an `X-Request-Id` header (an incoming one is reused), mat
 - **Rotation:** every refresh revokes the presented token and returns a new pair. Presenting a token that was already rotated or logged out is treated as theft: **all** of that user's sessions are revoked and the client must log in again. Clients should therefore not retry a refresh request with the same token.
 - **Login** returns the same 401 `INVALID_CREDENTIALS` for an unknown email and a wrong password, and runs a dummy argon2 verify for unknown emails so response time doesn't reveal which emails exist.
 - **Logout** revokes one refresh token (idempotent); **logout-all** revokes every session for the user.
+- **Change password** checks the current password, then updates the hash and revokes every refresh token in one transaction.
 - **Rate limit:** `/api/v1/auth/*` allows 10 requests per minute per IP (`RateLimit` headers are sent; 429 `RATE_LIMITED` when exceeded).
 
 **Trade-offs**
