@@ -373,12 +373,15 @@ Unknown params and invalid values → 422. `GET /users/me/tasks` takes the same 
 
 ### Comments
 
-| Method | Path                                       | Notes                                                                                         |
-| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| POST   | `/projects/:projectId/comments`            | `{ body, taskId? }`                                                                           |
-| GET    | `/projects/:projectId/comments`            | `?taskId=<uuid>` for one task, `?taskId=none` for project-level only; oldest first; paginated |
-| PATCH  | `/projects/:projectId/comments/:commentId` | author only                                                                                   |
-| DELETE | `/projects/:projectId/comments/:commentId` | author or ADMIN+                                                                              |
+| Method | Path                                       | Notes                                                                                                                                                                       |
+| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/comments`            | any member; `{ body, taskId? }`; `body` trimmed, 1–5000; `taskId` not in this project → 404                                                                                 |
+| GET    | `/projects/:projectId/comments`            | any member sees all comments; `?taskId=<uuid>` for one task (404 if not in this project), `?taskId=none` for project-level only; oldest first (`id` breaks ties); paginated |
+| GET    | `/projects/:projectId/comments/:commentId` | any member; the comment plus `task { id, title, description } \| null` and `project { id, name }`                                                                           |
+| PATCH  | `/projects/:projectId/comments/:commentId` | author only (ADMIN/OWNER can't edit others'); `{ body }`; sets `editedAt`                                                                                                   |
+| DELETE | `/projects/:projectId/comments/:commentId` | author or ADMIN+                                                                                                                                                            |
+
+POST, PATCH and list items return the comment fields (`id, projectId, taskId, authorId, body, editedAt, createdAt`) plus `author { id, name }`. List query params other than `taskId`, `page`, `limit` → 422. A comment from another project → 404. PATCH and DELETE check, in order: comment exists in this project (404) → permission (403) → body (422).
 
 ### Attachments
 

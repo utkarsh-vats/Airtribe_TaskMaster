@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+    Comment,
     InvitationStatus,
     Project,
     ProjectInvitation,
@@ -125,6 +126,23 @@ export function createTask(
             priority: overrides.priority ?? 'MEDIUM',
             dueDate: overrides.dueDate ?? null,
             assigneeId: overrides.assigneeId ?? null,
+            ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
+        },
+    });
+}
+
+/** A comment in `projectId`, project-level unless `taskId` is given. */
+export function createComment(
+    projectId: string,
+    authorId: string,
+    overrides: { taskId?: string | null; body?: string; createdAt?: Date } = {},
+): Promise<Comment> {
+    return prisma.comment.create({
+        data: {
+            projectId,
+            authorId,
+            taskId: overrides.taskId ?? null,
+            body: overrides.body ?? `Comment ${randomUUID().slice(0, 8)}`,
             ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
         },
     });

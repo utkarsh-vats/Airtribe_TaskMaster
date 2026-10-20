@@ -15,6 +15,13 @@ declare global {
                 assigneeId: string | null;
                 status: TaskStatus;
             };
+            /** Set by the comments module's `loadComment()` once the caller may act on the comment. */
+            comment?: {
+                id: string;
+                projectId: string;
+                taskId: string | null;
+                authorId: string;
+            };
             /** Set by `validate()`. Read it with `getValidated()` rather than directly. */
             validated?: { body?: unknown; params?: unknown; query?: unknown };
         }
