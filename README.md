@@ -70,6 +70,11 @@ Base path `/api/v1`. Implemented so far:
 | GET    | `/api/v1/projects/:projectId/tasks/:taskId`                    | member                      | —                                                                         | 200 task with `assignee`, `createdBy`, `commentCount`, `attachmentCount`                                                |
 | PATCH  | `/api/v1/projects/:projectId/tasks/:taskId`                    | creator, assignee or ADMIN+ | any of `title, description, dueDate, priority, status, assigneeId`        | 200 task; `{ "status": "COMPLETED" }` completes it                                                                      |
 | DELETE | `/api/v1/projects/:projectId/tasks/:taskId`                    | creator or ADMIN+           | —                                                                         | 204; deletes its comments and attachments                                                                               |
+| POST   | `/api/v1/projects/:projectId/comments`                         | member                      | `{ body, taskId? }` (no `taskId` = project-level comment)                 | 201 comment with `author { id, name }`                                                                                  |
+| GET    | `/api/v1/projects/:projectId/comments?taskId=&page=&limit=`    | member                      | —                                                                         | 200 comments, oldest first, paginated; `taskId=<uuid>` for one task, `taskId=none` for project-level only               |
+| GET    | `/api/v1/projects/:projectId/comments/:commentId`              | member                      | —                                                                         | 200 comment with `author`, `task` and `project` summaries                                                               |
+| PATCH  | `/api/v1/projects/:projectId/comments/:commentId`              | author                      | `{ body }`                                                                | 200 comment; sets `editedAt`                                                                                            |
+| DELETE | `/api/v1/projects/:projectId/comments/:commentId`              | author or ADMIN+            | —                                                                         | 204                                                                                                                     |
 
 A project in a response has `id, name, description, createdAt, updatedAt, myRole, memberCount`; single-project responses add `owner: { id, name, email }`. Pagination: `page` ≥ 1 (default 1), `limit` 1–100 (default 20).
 
@@ -94,7 +99,9 @@ Dates are ISO 8601 with an offset (`2026-10-25T17:00:00Z` or `…+05:30`). `assi
 
 Tasks without a due date always sort last. Example: `GET /api/v1/projects/:projectId/tasks?status=OPEN,IN_PROGRESS&assignee=me&sort=dueDate`.
 
-Comments and attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
+Comment `body` is trimmed, 1–5000 characters. A `taskId` that isn't in the project returns 404, both when posting and when filtering.
+
+Attachments follow; see [DESIGN.md §7](docs/DESIGN.md#7-api).
 
 ### Permissions
 
@@ -103,6 +110,7 @@ Every project has exactly one OWNER; other members are ADMIN or MEMBER. Anyone w
 - **Roles:** only the OWNER changes roles, and nobody can change their own (409). Setting someone's role to `OWNER` transfers ownership: the current owner becomes ADMIN in the same transaction.
 - **Leaving and removal:** any member can leave except the OWNER, who must transfer ownership first (409). ADMINs can remove MEMBERs; the OWNER can remove ADMINs and MEMBERs. A removed or departing member's open tasks are unassigned; completed tasks, comments and attachments stay.
 - **Tasks:** any member can create tasks and read everything in the project. A task can be updated by its creator, its assignee or an ADMIN+, and deleted by its creator or an ADMIN+. Completing a task records `completedAt`; reopening clears it.
+- **Comments:** any member can comment on the project or on one of its tasks, and read all comments. Only the author can edit a comment (not even the OWNER); the author or an ADMIN+ can delete it. Deleting a task deletes its comments.
 - **Invitations** go to an email address, so the invitee doesn't need an account yet: they see the invite under `/users/me/invitations` once registered with that email. ADMINs can invite MEMBERs; only the OWNER can invite ADMINs. One pending invitation per email per project (409 otherwise), and none for existing members (409).
 - **Expiry** is checked when used: a pending invitation past its expiry date shows as `EXPIRED` in lists and filters, and accepting or declining it returns 410 `INVITATION_EXPIRED`. Accepting someone else's invitation returns 404, so its existence isn't revealed.
 
@@ -135,6 +143,14 @@ Success bodies are `{ "data": ... }`, plus `"meta": { page, limit, total, totalP
 | 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                                                                |
 
 Every response carries an `X-Request-Id` header (an incoming one is reused), matching `requestId` in errors and the logs.
+
+### Postman collection
+
+[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (35 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks and Comments, Invitations, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
+
+- `Auth_Login` stores `access_token`, `refresh_token` and `user_id1`; every other request sends `Bearer {{access_token}}`.
+- Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`.
+- A typical run: `Auth_Register` (second user) → `Auth_Login` → `Create_Project` → `Create_Task` → `Create_Invitation` → log in as the invitee → `Accept_Invitation` → the remaining requests.
 
 ## Authentication
 
