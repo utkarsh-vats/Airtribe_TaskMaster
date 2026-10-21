@@ -1,0 +1,4162 @@
+{
+	"info": {
+		"_postman_id": "315bc1bd-ff6e-450b-b8a3-f0bda16e603f",
+		"name": "Airtribe_TaskMaster",
+		"description": "|  |  |\n| --- | --- |\n|  |  |",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "11649124"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Auth_Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"secondtest@subledger.local\",\r\n    \"name\": \"test user2\",\r\n    \"password\": \"Test@123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/auth/register",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth_Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var responseData = pm.response.json().data\r",
+									"pm.collectionVariables.set(\"access_token\", responseData.accessToken)\r",
+									"pm.collectionVariables.set(\"refresh_token\", responseData.refreshToken)\r",
+									"pm.collectionVariables.set(\"user_id1\", responseData.user.id)"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"test@subledger.local\",\r\n    \"password\": \"Test@123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/auth/login",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth_Refresh",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var responseData = pm.response.json().data\r",
+									"pm.collectionVariables.set(\"access_token\", responseData.accessToken)\r",
+									"pm.collectionVariables.set(\"refresh_token\", responseData.refreshToken)"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"refreshToken\": \"{{refresh_token}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/auth/refresh",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth_Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"refreshToken\": \"{{refresh_token}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/auth/logout",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth_Logout_All",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/auth/logout-all",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"auth",
+								"logout-all"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get_User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"user_id1\", pm.response.json().data.id)"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/users/me",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get_User_Invitations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/users/me/invitations",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"invitations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get_User_Tasks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/users/me/tasks",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"tasks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update_User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"bio\": \"changed bio\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/users/me",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update_Password",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"currentPassword\": \"Test@123\",\r\n    \"newPassword\": \"New@1234\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/users/me/password",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"password"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "Members and Invitations",
+					"item": [
+						{
+							"name": "Get_Members_By_Project",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/members",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"members"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update_Member",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/members/{{member_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"members",
+										"{{member_id1}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Member",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/members/{{member_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"members",
+										"{{member_id1}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create_Invitation",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"invitation_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"email\": \"secondtest@subledger.local\",\r\n    \"role\": \"ADMIN\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/invitations",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"invitations"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get_Invitations_By_Project",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/invitations",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"invitations"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": null,
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Invitation",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/invitations/{{invitation_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"invitations",
+										"{{invitation_id1}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tasks",
+					"item": [
+						{
+							"name": "Create_Task",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"task_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"test task 1\",\r\n    \"description\": \"optional description for test task\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/tasks",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"tasks"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get_Tasks",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/tasks",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"tasks"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "priority",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "assignee",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "createdBy",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "dueBefore",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "dueAfter",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "overdue",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "q",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "sort",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": null,
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get_Task_By_TaskID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/tasks/{{task_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"tasks",
+										"{{task_id1}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update_Task",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"description\": \"updated description of test task\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/tasks/{{task_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"tasks",
+										"{{task_id1}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Task",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/tasks/{{task_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"tasks",
+										"{{task_id1}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Comments",
+					"item": [
+						{
+							"name": "Create_Comment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"project_comment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"body\": \"This is a test comment.\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create_Comment_For_Task",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"comment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"body\": \"This is a test comment for task with id - '{{task_id1}}`.\",\r\n    \"taskId\": \"{{task_id1}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get_Comments",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments"
+									],
+									"query": [
+										{
+											"key": "taskId",
+											"value": "{{task_id1}}",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Comments_By_TaskId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://localhost:3000/api/v1/projects//comments?taskId=a107f7b1-8775-4f1e-ab19-175a791886ba",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "3000",
+											"path": [
+												"api",
+												"v1",
+												"projects",
+												"",
+												"comments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "a107f7b1-8775-4f1e-ab19-175a791886ba"
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "0d4e8436-da6a-43fb-a509-649356c2e60a"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "480"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1e0-kPKpLKEjO7w2le1BJiDb4zGqTUs\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 20 Oct 2026 23:11:03 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"body\": \"This is a test comment for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:02:55.573Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Project_Comments",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "9002ac4e-5963-4840-952a-19d1c950a315"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "804"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"324-ddQQQPVZY2/xWnjvBnuypCx5bDY\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 20 Oct 2026 23:11:54 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"body\": \"This is a test comment for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:02:55.573Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        },\n        {\n            \"id\": \"93017f5b-219d-41ae-a00d-0acbe97d99ab\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"body\": \"This is a test comment.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:03:14.340Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 2,\n        \"totalPages\": 1\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get_Comment_By_CommentId",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments",
+										"{{comment_id1}}"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Task_Comment_By_CommentId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://localhost:3000/api/v1/projects//comments/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "3000",
+											"path": [
+												"api",
+												"v1",
+												"projects",
+												"",
+												"comments",
+												""
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "81034eaf-12dc-4474-a710-2d93a7292165"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "628"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"274-UW4mHbI7nVvkLeE18Zep+BQhAJA\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 20 Oct 2026 23:13:56 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n        \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n        \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n        \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n        \"body\": \"This is a test comment for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n        \"editedAt\": null,\n        \"createdAt\": \"2026-10-20T23:02:55.573Z\",\n        \"author\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        },\n        \"task\": {\n            \"id\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"title\": \"test task 1\",\n            \"description\": \"optional description for test task\"\n        },\n        \"project\": {\n            \"id\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"name\": \"Test Project\"\n        }\n    }\n}"
+								},
+								{
+									"name": "Get_Project_Comment_By_CommentId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{project_comment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments",
+												"{{project_comment_id1}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "4e11bc3b-0102-4246-bbd3-fc4893421c56"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "422"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1a6-3Rm6B1cIDNt3Jvzem0pRzJFPwUo\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 20 Oct 2026 23:15:02 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"93017f5b-219d-41ae-a00d-0acbe97d99ab\",\n        \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n        \"taskId\": null,\n        \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n        \"body\": \"This is a test comment.\",\n        \"editedAt\": null,\n        \"createdAt\": \"2026-10-20T23:03:14.340Z\",\n        \"author\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        },\n        \"task\": null,\n        \"project\": {\n            \"id\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"name\": \"Test Project\"\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Update_Comment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"body\": \"Updated comment\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments",
+										"{{comment_id1}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Comment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"comments",
+										"{{comment_id1}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Attachments",
+					"item": [
+						{
+							"name": "Upload_Attachment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"project_attachment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+										},
+										{
+											"key": "taskId",
+											"value": "",
+											"type": "text",
+											"disabled": true
+										}
+									]
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Upload_Attachment",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "776a759a-a94b-4ca4-98df-7b2caf733918"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "277"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"115-m/dY3ltMkOhK/pTI+8p2iElRxXM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:36:38 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": null,\n        \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Unsupported_Media_Type",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "/E:/Games/Modded Stardew Valley/Stardew Valley.exe"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Unsupported Media Type",
+									"code": 415,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "e43fb8d1-dbc4-492f-9c9a-55790e706a53"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "159"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"9f-2yKVOtKGz9iRNH3w/w4A3ljgzcE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:50:22 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"UNSUPPORTED_MEDIA_TYPE\",\n        \"message\": \"File type application/x-msdos-program is not allowed\",\n        \"requestId\": \"e43fb8d1-dbc4-492f-9c9a-55790e706a53\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Missing_Key",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "b0fb803a-136a-4478-a029-f992cfaa101e"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "114"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"72-XNVHmVn6GM9ZxKfOdYa3/M5YpCU\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:52:49 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"BAD_REQUEST\",\n        \"message\": \"Field name missing\",\n        \"requestId\": \"b0fb803a-136a-4478-a029-f992cfaa101e\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Wrong_Key",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "document",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "4642377f-d778-4333-a4f8-bb8a3da218ea"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "117"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"75-N+pbw8wUYDEL0AbvJQ+tOrX6CdE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:53:16 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"BAD_REQUEST\",\n        \"message\": \"Unexpected file field\",\n        \"requestId\": \"4642377f-d778-4333-a4f8-bb8a3da218ea\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Missing_File",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": []
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Unprocessable Entity",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "18339435-78f5-482f-afcc-d189b179032f"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "189"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"bd-+v3SflkLXor+WMQk7R09VtPxwaY\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:53:58 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Request validation failed\",\n        \"details\": [\n            {\n                \"path\": \"\",\n                \"message\": \"Unrecognized key: \\\"file\\\"\"\n            }\n        ],\n        \"requestId\": \"18339435-78f5-482f-afcc-d189b179032f\"\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Upload_Attachment_For_Task",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"task_attachment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+										},
+										{
+											"key": "taskId",
+											"value": "{{task_id1}}",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Upload_Attachment",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}",
+													"type": "text"
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "7260ea1b-7d6c-4561-a6f2-e9d7be31f759"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "311"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"137-jYSGnbpof4E1FZjnqJKQtVUUZnE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:37:24 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n        \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get_Attachments",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									],
+									"query": [
+										{
+											"key": "taskId",
+											"value": "none",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Attachments",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": null,
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": null,
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": null,
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "b53f4991-916d-43da-b09b-304966c1b906"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "636"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"27c-c/FljqcljEILRyqX8iz7Pn01MOM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:39:49 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        },\n        {\n            \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": null,\n            \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 2,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_By_TaskId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?taskId={{task_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}"
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "1a731e38-e644-4d3b-93a5-f75f300b39fe"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "367"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"16f-4XoxdbORWbrrD3Q9NlSQFvtTVTA\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:40:15 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_For_TaskID_None",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?taskId=none",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "none"
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "de1550d3-e14f-43fc-957d-95f84def6e58"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "333"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"14d-UgZqMn3KFa2wQIV4LzWqS2D/+Bo\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:41:04 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": null,\n            \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_Invalid_Query_Param",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?foo_bar",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "none",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "foo_bar",
+													"value": null
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "c352c058-86f3-45cd-bb2b-57fa208c5cad"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "192"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"c0-nBwaW4i+wTTKv31IGCONw1N0rk0\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:41:43 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Request validation failed\",\n        \"details\": [\n            {\n                \"path\": \"\",\n                \"message\": \"Unrecognized key: \\\"foo_bar\\\"\"\n            }\n        ],\n        \"requestId\": \"c352c058-86f3-45cd-bb2b-57fa208c5cad\"\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get_Attachment_By_AttachmentID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Project_Attachment",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{project_attachment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments",
+												"{{project_attachment_id1}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "34cec649-9733-47ae-80c1-523a9db36caf"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "277"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"115-m/dY3ltMkOhK/pTI+8p2iElRxXM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:43:34 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": null,\n        \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								},
+								{
+									"name": "Get_Task_Attachment",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments",
+												"{{task_attachment_id1}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "510a98fb-4c63-4360-a344-1ec66422c2ae"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "311"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"137-jYSGnbpof4E1FZjnqJKQtVUUZnE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:44:04 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n        \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Download_Attachment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}/download",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}",
+										"download"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Attachment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Create_Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"project_id1\", pm.response.json().data.id)"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"Test Project\",\r\n    \"description\": \"Desctiption for a newly created project\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/projects",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"projects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get_Projects",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/projects",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"projects"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get_Project_By_ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/projects/{{project_id1}}",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project_id1}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update_Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"description\": \"updated description\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/projects/{{project_id1}}",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project_id1}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete_Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/projects/{{project_id1}}",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project_id1}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Invitations",
+			"item": [
+				{
+					"name": "Accept_Invitation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/invitations/{{invitation_id1}}/accept",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"invitations",
+								"{{invitation_id1}}",
+								"accept"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Decline_Invitation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/invitations/{{invitation_id1}}/decline",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"invitations",
+								"{{invitation_id1}}",
+								"decline"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get_Notifications",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"notification_id1\", pm.response.json().data[0].id)"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/notifications",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "unread",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark_Notification_Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/notifications/{{notification_id1}}/read",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"notifications",
+								"{{notification_id1}}",
+								"read"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark_All_Notification_Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/notifications/read-all",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"notifications",
+								"read-all"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Notifications_Stream",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{v1_url}}/notifications/stream",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"notifications",
+								"stream"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI",
+			"item": [
+				{
+					"name": "Generate_Task_Description",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"Add CSV export\",\r\n    \"notes\": \"Admins only; include archived tasks\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/ai/task-description",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"ai",
+								"task-description"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Task_Description",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Add CSV export\",\r\n    \"notes\": \"Admins only; include archived tasks\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/ai/task-description",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"ai",
+										"task-description"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "X-Request-Id",
+									"value": "7d85c4c7-6f01-45e8-b050-d21ea997ba31"
+								},
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "RateLimit",
+									"value": "\"10-in-1min\"; r=9; t=60"
+								},
+								{
+									"key": "RateLimit-Policy",
+									"value": "\"10-in-1min\"; q=10; w=60; pk=:YmM5MjU1YjFmZjAw:"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "463"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"1cf-2RXmHFwTksZmZ9STt5r42NLG5Qw\""
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 21 Oct 2026 08:05:20 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"description\": \"Provide admin users with the ability to export task data, including archived items, to a CSV file.\\n- Restrict access to the CSV export functionality strictly to admin users.\\n- Add an export option to the task management interface visible only to authorized users.\\n- Include both active and archived tasks in the exported CSV dataset.\\n- Ensure the exported CSV file downloads properly with accurate column headers and formatted data.\"\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "v1_url",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "user_id1",
+			"value": "6f981356-863e-4cf6-baff-22306e27955f",
+			"type": "string"
+		},
+		{
+			"key": "user_email1",
+			"value": "test@subledger.local",
+			"type": "string"
+		},
+		{
+			"key": "user_id2",
+			"value": "d0f01e93-92c9-47ff-9bd1-b4198ca13dcb",
+			"type": "string"
+		},
+		{
+			"key": "user_email2",
+			"value": "secondtest@subledger.local",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "project_id1",
+			"value": ""
+		},
+		{
+			"key": "member_id1",
+			"value": "6f981356-863e-4cf6-baff-22306e27955f",
+			"type": "string"
+		},
+		{
+			"key": "invitation_id1",
+			"value": "5cd8ff56-d4d9-4f83-91b9-48e9fc81da0f",
+			"type": "string"
+		},
+		{
+			"key": "task_id1",
+			"value": "a107f7b1-8775-4f1e-ab19-175a791886ba",
+			"type": "string"
+		},
+		{
+			"key": "comment_id1",
+			"value": ""
+		},
+		{
+			"key": "project_comment_id1",
+			"value": ""
+		},
+		{
+			"key": "project_attachment_id1",
+			"value": ""
+		},
+		{
+			"key": "task_attachment_id1",
+			"value": ""
+		},
+		{
+			"key": "project_id2",
+			"value": ""
+		},
+		{
+			"key": "notification_id1",
+			"value": ""
+		}
+	]
+}
