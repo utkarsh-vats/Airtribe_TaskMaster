@@ -5,6 +5,7 @@ import { membersRouter } from './modules/members/members.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { projectScopedRouter, projectsRouter } from './modules/projects/projects.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
+import { aiRouter } from './modules/ai/ai.routes';
 import { attachmentsRouter } from './modules/attachments/attachments.routes';
 import { commentsRouter } from './modules/comments/comments.routes';
 import { usersRouter } from './modules/users/users.routes';
@@ -21,6 +22,7 @@ apiRouter.use('/users', usersRouter);
 apiRouter.use('/projects', projectsRouter);
 apiRouter.use('/invitations', invitationsRouter);
 apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/ai', aiRouter);
 
 projectScopedRouter.use('/members', membersRouter);
 projectScopedRouter.use('/invitations', projectInvitationsRouter);

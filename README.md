@@ -84,6 +84,7 @@ Base path `/api/v1`. Implemented so far:
 | GET    | `/api/v1/notifications/stream`                                   | Bearer                      | —                                                                         | 200 `text/event-stream` of new notifications (see below)                                                                |
 | PATCH  | `/api/v1/notifications/:notificationId/read`                     | Bearer                      | —                                                                         | 204; idempotent                                                                                                         |
 | POST   | `/api/v1/notifications/read-all`                                 | Bearer                      | —                                                                         | 204                                                                                                                     |
+| POST   | `/api/v1/ai/task-description`                                    | Bearer                      | `{ title, notes? }`                                                       | 200 `{ description }` suggested for a new task (nothing is saved); 503 if AI isn't configured                           |
 
 A project in a response has `id, name, description, createdAt, updatedAt, myRole, memberCount`; single-project responses add `owner: { id, name, email }`. Pagination: `page` ≥ 1 (default 1), `limit` 1–100 (default 20).
 
@@ -112,7 +113,7 @@ Comment `body` is trimmed, 1–5000 characters. A `taskId` that isn't in the pro
 
 Attachments: one file per upload, in the form field `file`, up to `MAX_UPLOAD_MB` (10 MB; over → 413). Allowed types: PNG, JPEG, GIF, WebP, PDF, plain text, CSV, zip, Word and Excel (anything else → 415). The type is the one the client declares; the file contents aren't inspected. The original filename is kept for display and downloads only; files are stored under random server-generated names.
 
-The full API, including the optional AI endpoint, is in [DESIGN.md §7](docs/DESIGN.md#7-api).
+The full API is in [DESIGN.md §7](docs/DESIGN.md#7-api).
 
 ### Permissions
 
@@ -155,6 +156,8 @@ Success bodies are `{ "data": ... }`, plus `"meta": { page, limit, total, totalP
 | 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too)                                                |
 | 429  | `RATE_LIMITED`                                                                                                                  |
 | 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                                                                |
+| 502  | `AI_UPSTREAM_ERROR` (the AI provider failed or took longer than 10 s)                                                           |
+| 503  | `AI_DISABLED` (no AI provider configured)                                                                                       |     |
 
 Every response carries an `X-Request-Id` header (an incoming one is reused), matching `requestId` in errors and the logs.
 
@@ -192,6 +195,10 @@ The browser's `EventSource` can't send an `Authorization` header, so use a fetch
 
 **Limitation:** open streams are tracked in memory, so live pushes only reach clients connected to the same server instance. Running several instances would need a shared channel such as Redis pub/sub; stored notifications aren't affected.
 
+### AI task descriptions
+
+`POST /api/v1/ai/task-description` with `{ title, notes? }` returns a suggested description: one goal sentence followed by 3–6 acceptance criteria as `- ` bullets, about 150 words at most. It only suggests text; save it by creating or updating the task as usual. Each user can make 10 requests per minute; a provider call that fails or takes over 10 s returns 502 without exposing the provider's error.
+
 ## Authentication
 
 - **Passwords** are hashed with argon2id. Emails are trimmed and lowercased before storage and lookup.
@@ -213,6 +220,15 @@ The browser's `EventSource` can't send an `Authorization` header, so use a fetch
 `DATABASE_URL` is assembled from the `POSTGRES_*` variables in `.env` (via dotenv-expand), so the credentials live in one place and Docker Compose reads the same values. Keep `POSTGRES_PASSWORD` URL-safe (letters, digits, `-`, `_`).
 
 Uploaded files are stored on local disk under `UPLOAD_DIR` (default `./uploads`, gitignored), one folder per project. Tests use `./tmp/test-uploads` and delete it afterwards.
+
+**AI provider (optional).** The AI endpoint works with either Anthropic (Claude) or Google Gemini, chosen in `.env`, so you can compare their output and cost by switching config only:
+
+| `AI_PROVIDER` | Get an API key                                                              | `AI_MODEL`                                                                            |
+| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `anthropic`   | [Anthropic Console](https://console.anthropic.com/settings/keys) → API keys | a Claude model id, e.g. `claude-opus-5-5`                                             |
+| `gemini`      | [Google AI Studio](https://aistudio.google.com/apikey) → Get API key        | a Gemini model id from the [model list](https://ai.google.dev/gemini-api/docs/models) |
+
+Set `AI_PROVIDER`, `AI_API_KEY` and `AI_MODEL` together; the server refuses to start if a provider is set without the other two. Leave `AI_PROVIDER` empty to turn the feature off (503 `AI_DISABLED`). Tests never call a real provider, whatever `.env` says.
 
 ## Scripts
 

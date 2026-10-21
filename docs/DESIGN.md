@@ -406,9 +406,9 @@ POST, PATCH and list items return the comment fields (`id, projectId, taskId, au
 
 ### AI (optional)
 
-| Method | Path                   | Notes                                                                                    |
-| ------ | ---------------------- | ---------------------------------------------------------------------------------------- |
-| POST   | `/ai/task-description` | `{ title, notes? }` → `{ description }`. 503 `AI_DISABLED` when no API key is configured |
+| Method | Path                   | Notes                                                                                                                                                                                                                      |
+| ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/ai/task-description` | any signed-in user; strict `{ title (trim, 1–200), notes? (trim, ≤ 2000) }` → `{ description }`; 10/min per user; 503 `AI_DISABLED` when no provider is configured; 502 `AI_UPSTREAM_ERROR` on provider failure or timeout |
 
 ### Health
 
@@ -453,7 +453,8 @@ Error:
 | 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                                                                                |
 | 429  | `RATE_LIMITED`                                           | Rate limit hit                                                                                                       |
 | 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)                                                        |
-| 503  | `AI_DISABLED`                                            | AI endpoint without a key                                                                                            |
+| 502  | `AI_UPSTREAM_ERROR`                                      | AI provider error, empty answer or 10 s timeout (details logged, never returned)                                     |
+| 503  | `AI_DISABLED`                                            | AI endpoint with no provider configured (`AI_PROVIDER` empty)                                                        |
 
 Implementation: an `AppError` base class with subclasses (`NotFoundError`, `ForbiddenError`, `ConflictError`, …). The error middleware maps `AppError`, `ZodError`, multer errors, and Prisma `P2002` (unique violation → 409) / `P2025` (not found → 404); everything else is 500.
 
@@ -491,11 +492,14 @@ SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this
 
 ## 10. AI task description (optional)
 
-- `AiProvider` interface: `generateTaskDescription({ title, notes }): Promise<string>`. One real implementation (any provider via its SDK, key from env) and a `FakeAiProvider` for tests.
-- Prompt asks for a concise description with a short goal statement and a checklist of acceptance criteria, plain text, max ~150 words.
-- 10 s timeout; provider errors map to 502 `AI_UPSTREAM_ERROR`.
-- Rate limit per user (e.g. 10/min).
-- The endpoint only suggests text; the client still creates the task through the normal endpoint.
+- `AiProvider` interface: `generateTaskDescription({ title, notes? }): Promise<string>`. **Two real implementations**, chosen by `AI_PROVIDER`, so output quality and cost can be compared by changing config only: `anthropic` (official `@anthropic-ai/sdk`) and `gemini` (official `@google/genai`). Both take the model from `AI_MODEL`; no model id is hardcoded. A `FakeAiProvider` returns a deterministic description built from the input for tests.
+- Config: if `AI_PROVIDER` is set, `AI_API_KEY` and `AI_MODEL` are required (the app refuses to boot otherwise); empty `AI_PROVIDER` disables the feature (503 `AI_DISABLED`).
+- Registry: `getAiProvider()` builds the configured provider lazily (or returns null); `setAiProvider()` overrides it in tests. Under `NODE_ENV=test` the configured provider is always null, so tests can't reach a real API even if `.env` holds a key.
+- Prompt (shared by both providers): the system instruction asks for plain text, one goal sentence, then 3–6 acceptance criteria as `- ` bullets, about 150 words, no headings or preamble. Title and notes go in the user turn inside `<title>` / `<notes>` tags, and the model is told to treat that content as data, never instructions. Any `<title>`/`<notes>` tags inside the user's text (including spaced variants like `< /notes >`) are stripped so the data can't close its block early.
+- Output is trimmed and capped at 5000 characters (the task description limit); an empty answer is a 502.
+- 10 s budget per call: the Anthropic client uses a 10 s timeout with retries off (the SDK otherwise retries, multiplying the wait); Gemini uses a 10 s HTTP timeout plus an abort signal. A Claude `refusal` stop reason, an empty Gemini answer, a timeout or any SDK error map to 502 `AI_UPSTREAM_ERROR`; the underlying error is logged with the provider name and never returned.
+- Rate limit: 10 requests/min **per user** (keyed by the authenticated user id, not the IP), via `createRateLimiter({ keyGenerator: byUserId })`; skipped under `NODE_ENV=test` like the auth limiter.
+- The endpoint only suggests text; the client still creates or updates the task through the normal endpoints.
 
 ---
 
@@ -923,6 +927,7 @@ INVITATION_TTL_DAYS=7
 CORS_ORIGIN=http://localhost:5173
 UPLOAD_DIR=./uploads
 MAX_UPLOAD_MB=10
-AI_PROVIDER=
+AI_PROVIDER=          # anthropic | gemini; empty disables AI
 AI_API_KEY=
+AI_MODEL=             # required when AI_PROVIDER is set
 ```

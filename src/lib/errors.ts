@@ -75,6 +75,19 @@ export class TooManyRequestsError extends AppError {
     }
 }
 
+export class AiDisabledError extends AppError {
+    constructor(message = 'AI features are not configured on this server') {
+        super(503, 'AI_DISABLED', message);
+    }
+}
+
+/** The provider failed or timed out. The underlying error is logged, never sent. */
+export class AiUpstreamError extends AppError {
+    constructor(message = 'The AI provider could not generate a description; try again later') {
+        super(502, 'AI_UPSTREAM_ERROR', message);
+    }
+}
+
 export interface ValidationIssue {
     path: string;
     message: string;

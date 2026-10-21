@@ -28,6 +28,8 @@
         "seed": "tsx prisma/seed.ts"
     },
     "dependencies": {
+        "@anthropic-ai/sdk": "^0.137.0",
+        "@google/genai": "^2.30.0",
         "@prisma/client": "^6.0.0",
         "argon2": "^0.41.0",
         "cors": "^2.8.5",
