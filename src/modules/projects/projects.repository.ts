@@ -81,6 +81,19 @@ export function updateProject(
     return prisma.project.update({ where: { id }, data, select: projectDetailSelect });
 }
 
-export async function deleteProject(id: string): Promise<void> {
-    await prisma.project.delete({ where: { id }, select: { id: true } });
+/**
+ * Deletes the project (everything under it cascades) and returns the storage keys of all its
+ * attachments. Locking the project row first makes concurrent uploads wait on their foreign-key
+ * check and then fail, so none can be missed between collecting the keys and the delete.
+ */
+export function deleteProjectReturningStorageKeys(id: string): Promise<string[]> {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT 1 FROM projects WHERE id = ${id}::uuid FOR UPDATE`;
+        const attachments = await tx.attachment.findMany({
+            where: { projectId: id },
+            select: { storageKey: true },
+        });
+        await tx.project.delete({ where: { id }, select: { id: true } });
+        return attachments.map((a) => a.storageKey);
+    });
 }

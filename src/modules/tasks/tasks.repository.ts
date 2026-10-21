@@ -117,6 +117,20 @@ export function updateTask(
     });
 }
 
-export async function deleteTask(id: string): Promise<void> {
-    await prisma.task.delete({ where: { id }, select: { id: true } });
+/**
+ * Deletes the task (comments and attachment rows cascade) and returns the storage keys of the
+ * attachments that went with it. The task row is locked first: an upload for this task then
+ * waits on its foreign-key check and fails once the task is gone, so no attachment can slip in
+ * between collecting the keys and the delete.
+ */
+export function deleteTaskReturningStorageKeys(id: string): Promise<string[]> {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT 1 FROM tasks WHERE id = ${id}::uuid FOR UPDATE`;
+        const attachments = await tx.attachment.findMany({
+            where: { taskId: id },
+            select: { storageKey: true },
+        });
+        await tx.task.delete({ where: { id }, select: { id: true } });
+        return attachments.map((a) => a.storageKey);
+    });
 }

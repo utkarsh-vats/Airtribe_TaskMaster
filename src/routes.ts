@@ -4,6 +4,7 @@ import { invitationsRouter, projectInvitationsRouter } from './modules/members/i
 import { membersRouter } from './modules/members/members.routes';
 import { projectScopedRouter, projectsRouter } from './modules/projects/projects.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
+import { attachmentsRouter } from './modules/attachments/attachments.routes';
 import { commentsRouter } from './modules/comments/comments.routes';
 import { usersRouter } from './modules/users/users.routes';
 
@@ -23,3 +24,4 @@ projectScopedRouter.use('/members', membersRouter);
 projectScopedRouter.use('/invitations', projectInvitationsRouter);
 projectScopedRouter.use('/tasks', tasksRouter);
 projectScopedRouter.use('/comments', commentsRouter);
+projectScopedRouter.use('/attachments', attachmentsRouter);

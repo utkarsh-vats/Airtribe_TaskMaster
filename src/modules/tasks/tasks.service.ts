@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors';
 import { buildPageMeta, toSkipTake, type PageMeta } from '../../lib/pagination';
 import { hasRole } from '../../lib/roles';
+import { deleteStoredFiles } from '../../lib/storage';
 import * as membersRepository from '../members/members.repository';
 import {
     buildTaskOrderBy,
@@ -117,8 +118,9 @@ export async function updateTask(
 
 export async function deleteTask(taskId: string): Promise<void> {
     // Comments and attachment rows go with it via the composite FKs' ON DELETE CASCADE.
-    await tasksRepository.deleteTask(taskId);
-    // TODO(step 10): delete attachment files from storage after commit
+    const storageKeys = await tasksRepository.deleteTaskReturningStorageKeys(taskId);
+    // After commit, and best-effort: a leftover file must not fail a delete that succeeded.
+    await deleteStoredFiles(storageKeys);
 }
 
 export async function listProjectTasks(

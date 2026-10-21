@@ -7,6 +7,7 @@ import {
     type PageMeta,
     type PaginationQuery,
 } from '../../lib/pagination';
+import { deleteStoredFiles } from '../../lib/storage';
 import * as projectsRepository from './projects.repository';
 import type { ProjectDetailRow, ProjectSummaryRow } from './projects.repository';
 import type { CreateProjectInput, UpdateProjectInput } from './projects.schemas';
@@ -83,6 +84,7 @@ export async function updateProject(
 
 export async function deleteProject(projectId: string): Promise<void> {
     // Members, invitations, tasks, comments and attachment rows go with it via ON DELETE CASCADE.
-    await projectsRepository.deleteProject(projectId);
-    // TODO(step 10): delete attachment files from storage after commit
+    const storageKeys = await projectsRepository.deleteProjectReturningStorageKeys(projectId);
+    // After commit, and best-effort: a leftover file must not fail a delete that succeeded.
+    await deleteStoredFiles(storageKeys);
 }

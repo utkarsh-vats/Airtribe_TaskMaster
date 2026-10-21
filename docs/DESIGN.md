@@ -228,9 +228,11 @@ erDiagram
 
 ### attachments
 
-- `storage_key` is a random UUID-based path; the user's filename is stored only as `original_name` and sent back in `Content-Disposition` on download.
-- Max 10 MB, MIME allowlist (images, PDF, plain text, CSV, common Office types, zip).
-- Same cascade and composite-FK rules as comments.
+- `storage_key` is `<project_id>/<uuid>`, generated server-side; no part of the user's filename reaches the path, and `LocalStorage` refuses any key that resolves outside `UPLOAD_DIR`. The filename is stored only as `original_name` (basename only, control characters stripped, max 255 chars, `file` if nothing is left) and sent back in `Content-Disposition` on download.
+- Max `MAX_UPLOAD_MB` (10 MB), one file per request, MIME allowlist: PNG, JPEG, GIF, WebP, PDF, plain text, CSV, zip, Word (`.doc`, `.docx`), Excel (`.xls`, `.xlsx`).
+- **Known limitation:** the MIME type is the one the client declares in the multipart part. There's no magic-byte sniffing, so a renamed executable labelled `text/plain` is accepted. Downloads are always `Content-Disposition: attachment` and helmet sends `X-Content-Type-Options: nosniff`, so browsers save rather than render them.
+- Upload order: task check (404 before anything is written) → write the file → insert the row; if the insert fails the file is deleted, so failed uploads leave no orphans.
+- Same cascade and composite-FK rules as comments. Deleting an attachment, task or project deletes the rows first, then the files after the transaction commits; a failed file delete is logged as a warning and doesn't fail the request. Task and project deletes lock the parent row before collecting storage keys, so an upload racing the delete fails its FK check instead of leaving an untracked file.
 
 ### notifications
 
@@ -385,12 +387,13 @@ POST, PATCH and list items return the comment fields (`id, projectId, taskId, au
 
 ### Attachments
 
-| Method | Path                                                      | Notes                                            |
-| ------ | --------------------------------------------------------- | ------------------------------------------------ |
-| POST   | `/projects/:projectId/attachments`                        | `multipart/form-data`: `file`, optional `taskId` |
-| GET    | `/projects/:projectId/attachments`                        | `?taskId=` as above; metadata only               |
-| GET    | `/projects/:projectId/attachments/:attachmentId/download` | streams file, `Content-Disposition: attachment`  |
-| DELETE | `/projects/:projectId/attachments/:attachmentId`          | uploader or ADMIN+                               |
+| Method | Path                                                      | Notes                                                                                                                                                                                                |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/attachments`                        | any member; `multipart/form-data`: `file` (exactly one), optional `taskId` (404 if not in this project); 201 `{ id, originalName, mimeType, sizeBytes, taskId, createdAt, uploadedBy { id, name } }` |
+| GET    | `/projects/:projectId/attachments`                        | any member; `?taskId=<uuid>` / `none` as for comments (404 if not in this project); unknown params → 422; newest first (`id` breaks ties); paginated; metadata only                                  |
+| GET    | `/projects/:projectId/attachments/:attachmentId`          | any member; metadata (same shape as POST)                                                                                                                                                            |
+| GET    | `/projects/:projectId/attachments/:attachmentId/download` | any member; streams the file with the stored `Content-Type`, `Content-Length` and `Content-Disposition: attachment` (UTF-8 names encoded as `filename*`); file missing from storage → 404            |
+| DELETE | `/projects/:projectId/attachments/:attachmentId`          | uploader or ADMIN+ (else 403); row, then file; 204                                                                                                                                                   |
 
 ### Notifications (optional)
 
@@ -437,7 +440,7 @@ Error:
 
 | HTTP | `code`                                                   | When                                                                                                                 |
 | ---- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart                                                                                    |
+| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart (incl. a second file or a file field other than `file`)                            |
 | 400  | `INVALID_CURRENT_PASSWORD`                               | Change-password with a wrong current password                                                                        |
 | 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                                                                     |
 | 401  | `INVALID_REFRESH_TOKEN`                                  | Refresh token unknown, expired, revoked or reused                                                                    |
@@ -445,8 +448,8 @@ Error:
 | 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                                                                             |
 | 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving, changing own role, invitation no longer pending |
 | 410  | `INVITATION_EXPIRED`                                     | Accepting or declining an invitation past `expires_at`                                                               |
-| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over limit                                                                                                    |
-| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | MIME not allowed                                                                                                     |
+| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over `MAX_UPLOAD_MB`, or JSON body over 1 MB                                                                  |
+| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | Declared MIME type not in the allowlist                                                                              |
 | 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                                                                                |
 | 429  | `RATE_LIMITED`                                           | Rate limit hit                                                                                                       |
 | 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)                                                        |
@@ -489,7 +492,7 @@ SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this
 - [ ] Rate limits on auth and AI routes
 - [ ] Non-members get 404
 - [ ] `password_hash` excluded by explicit selects
-- [ ] Upload size limit, MIME allowlist, random storage keys, `Content-Disposition: attachment` on download
+- [ ] Upload size limit, MIME allowlist, random storage keys, `Content-Disposition: attachment` on download (MIME is client-declared, not sniffed; storage refuses keys outside `UPLOAD_DIR`)
 - [ ] Env validated at boot with Zod; app refuses to start on missing secrets
 - [ ] No stack traces in responses
 - [ ] `.env` gitignored, `.env.example` committed

@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import {
     AppError,
@@ -43,6 +44,13 @@ function toAppError(err: unknown): AppError {
         if (err.code === 'P2025') return new NotFoundError();
     }
 
+    if (err instanceof MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') return new PayloadTooLargeError('File too large');
+        // LIMIT_UNEXPECTED_FILE / LIMIT_FILE_COUNT (a second or wrongly named file field) and
+        // the other part/field limits: the multipart body itself is wrong.
+        return new BadRequestError(err.message);
+    }
+
     if (isBodyParserError(err)) {
         if (err.type === 'entity.parse.failed') return new BadRequestError('Malformed JSON body');
         if (err.type === 'entity.too.large')
@@ -52,8 +60,15 @@ function toAppError(err: unknown): AppError {
     return new AppError(500, 'INTERNAL_ERROR', 'Something went wrong');
 }
 
-// Express recognises error handlers by their 4-argument signature, so `_next` must stay.
-export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
+// Express recognises error handlers by their 4-argument signature.
+export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+    // Mid-stream failure (e.g. a download): too late for a JSON error, so let Express close
+    // the connection.
+    if (res.headersSent) {
+        next(err);
+        return;
+    }
+
     const appError = toAppError(err);
 
     if (appError.status >= 500) {

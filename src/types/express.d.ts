@@ -22,6 +22,13 @@ declare global {
                 taskId: string | null;
                 authorId: string;
             };
+            /** Set by the attachments module's `loadAttachment()` once the caller may act on it. */
+            attachment?: {
+                id: string;
+                projectId: string;
+                uploadedById: string;
+                storageKey: string;
+            };
             /** Set by `validate()`. Read it with `getValidated()` rather than directly. */
             validated?: { body?: unknown; params?: unknown; query?: unknown };
         }
