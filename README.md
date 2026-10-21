@@ -176,6 +176,8 @@ Tests are silent by default only while `LOG_LEVEL` is unset, so keep it out of `
 
 Base path `/api/v1`. Endpoints:
 
+Interactive docs: http://localhost:3000/docs (raw spec at /openapi.json). The spec can also be imported into Postman.
+
 | Method | Path                                                             | Auth                        | Body                                                                      | Success                                                                                                                 |
 | ------ | ---------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/health` (no base path)                                         | —                           | —                                                                         | 200 `{ data: { status, db } }` (503 if the database is down)                                                            |

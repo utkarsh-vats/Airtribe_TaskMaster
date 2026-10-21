@@ -3,7 +3,9 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
+import { openApiDocument } from './docs/openapi';
 import { logger } from './lib/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './modules/health/health.routes';
@@ -41,6 +43,17 @@ export function createApp() {
     app.use(express.json({ limit: '1mb' }));
 
     app.use(healthRouter);
+
+    // API docs, outside /api/v1 and without auth. Swagger UI only loads same-origin scripts,
+    // so helmet's default CSP doesn't need relaxing.
+    app.get('/openapi.json', (_req, res) => {
+        res.json(openApiDocument);
+    });
+    app.use(
+        '/docs',
+        swaggerUi.serve,
+        swaggerUi.setup(openApiDocument, { customSiteTitle: 'TaskMaster API docs' }),
+    );
     app.use('/api/v1', apiRouter);
 
     app.use(notFoundHandler);

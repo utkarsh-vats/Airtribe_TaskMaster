@@ -297,7 +297,9 @@ Rate limit `/auth/*` (e.g. 10 requests/min/IP).
 
 ## 7. API
 
-Base path `/api/v1`. All routes except register, login, refresh, and health require a bearer token. All IDs are UUIDs, validated before hitting the DB (invalid → 422).
+Base path `/api/v1`. All routes except register, login, refresh, logout, and health require a bearer token. All IDs are UUIDs, validated before hitting the DB (invalid → 422).
+
+**Interactive docs:** `GET /docs` serves Swagger UI and `GET /openapi.json` the raw OpenAPI 3.1 document (both outside `/api/v1`, no auth). The document is built in `src/docs/openapi.ts`: request bodies and query params are converted from the routes' own Zod schemas with `z.toJSONSchema()`, response shapes and error responses are declared as shared components, and a test checks that every registered route is documented and every documented operation exists.
 
 ### Auth
 
