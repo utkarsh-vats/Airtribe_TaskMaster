@@ -7,11 +7,15 @@ import { env } from './config/env';
 import { logger } from './lib/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './modules/health/health.routes';
+import { registerNotificationListeners } from './modules/notifications/notifications.listener';
 import { apiRouter } from './routes';
 
 /** Builds the Express app without listening, so tests can drive it with supertest. */
 export function createApp() {
     const app = express();
+
+    // Idempotent, so building several apps (as the tests do) doesn't duplicate listeners.
+    registerNotificationListeners();
 
     app.use(
         pinoHttp({

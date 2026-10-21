@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authRouter } from './modules/auth/auth.routes';
 import { invitationsRouter, projectInvitationsRouter } from './modules/members/invitations.routes';
 import { membersRouter } from './modules/members/members.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { projectScopedRouter, projectsRouter } from './modules/projects/projects.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
 import { attachmentsRouter } from './modules/attachments/attachments.routes';
@@ -19,6 +20,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/projects', projectsRouter);
 apiRouter.use('/invitations', invitationsRouter);
+apiRouter.use('/notifications', notificationsRouter);
 
 projectScopedRouter.use('/members', membersRouter);
 projectScopedRouter.use('/invitations', projectInvitationsRouter);

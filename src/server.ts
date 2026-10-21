@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { prisma } from './db/prisma';
 import { logger } from './lib/logger';
+import { closeAllStreams } from './modules/notifications/sse';
 
 const app = createApp();
 
@@ -21,12 +22,15 @@ function shutdown(signal: NodeJS.Signals) {
     shuttingDown = true;
     logger.info({ signal }, 'Shutting down');
 
+    // SSE streams never finish on their own; end them so server.close() isn't held open.
+    closeAllStreams();
+
     // Stop accepting connections, let in-flight requests finish, then close the DB pool.
     server.close((err) => {
         void prisma.$disconnect().finally(() => process.exit(err ? 1 : 0));
     });
 
-    // Hard stop if something keeps the process alive (e.g. open SSE streams).
+    // Hard stop if something still keeps the process alive.
     setTimeout(() => process.exit(1), 10_000).unref();
 }
 

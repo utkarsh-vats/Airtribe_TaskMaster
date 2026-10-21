@@ -2,6 +2,7 @@ import type { Prisma, ProjectRole } from '@prisma/client';
 import type { Request } from 'express';
 import { ForbiddenError, NotFoundError } from '../../lib/errors';
 import { buildPageMeta, toSkipTake, type PageMeta } from '../../lib/pagination';
+import { publish } from '../../lib/events';
 import { hasRole } from '../../lib/roles';
 import * as tasksRepository from '../tasks/tasks.repository';
 import * as commentRepository from './comments.repository';
@@ -61,11 +62,18 @@ export async function createComment(
     if (input.taskId) {
         await assertTaskInProject(projectId, input.taskId);
     }
-    return commentRepository.createComment({
+    const comment = await commentRepository.createComment({
         ...input,
         projectId,
         authorId: userId,
     });
+    await publish('comment.created', {
+        projectId,
+        taskId: comment.taskId,
+        commentId: comment.id,
+        actorId: userId,
+    });
+    return comment;
 }
 
 export async function getComment(projectId: string, commentId: string): Promise<CommentDetail> {

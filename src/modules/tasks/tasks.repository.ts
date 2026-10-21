@@ -69,11 +69,20 @@ export async function listMyTasks({
     return { rows, total };
 }
 
-/** The fields permission checks and completion logic need. */
+/** The fields permission checks, completion logic and change detection need. */
 export function findTaskRef(projectId: string, taskId: string) {
     return prisma.task.findFirst({
         where: { id: taskId, projectId },
-        select: { id: true, createdById: true, assigneeId: true, status: true },
+        select: {
+            id: true,
+            createdById: true,
+            assigneeId: true,
+            status: true,
+            title: true,
+            description: true,
+            priority: true,
+            dueDate: true,
+        },
     });
 }
 

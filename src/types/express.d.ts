@@ -1,5 +1,5 @@
 // Request augmentations live here. pino-http already adds `req.id` and `req.log`.
-import type { ProjectRole, TaskStatus } from '@prisma/client';
+import type { ProjectRole, TaskPriority, TaskStatus } from '@prisma/client';
 
 declare global {
     namespace Express {
@@ -14,6 +14,11 @@ declare global {
                 createdById: string;
                 assigneeId: string | null;
                 status: TaskStatus;
+                // The editable fields as they were, so an update can tell what actually changed.
+                title: string;
+                description: string | null;
+                priority: TaskPriority;
+                dueDate: Date | null;
             };
             /** Set by the comments module's `loadComment()` once the caller may act on the comment. */
             comment?: {

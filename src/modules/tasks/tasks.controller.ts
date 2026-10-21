@@ -30,7 +30,12 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
     const body = getValidated(req, 'body', updateTaskBodySchema);
     ok(
         res,
-        await tasksService.updateTask(currentMembership(req).projectId, currentTask(req), body),
+        await tasksService.updateTask(
+            currentMembership(req).projectId,
+            currentMembership(req).userId,
+            currentTask(req),
+            body,
+        ),
     );
 }
 

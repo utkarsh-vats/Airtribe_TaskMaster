@@ -2,6 +2,7 @@ import { Prisma, type ProjectRole, type TaskStatus } from '@prisma/client';
 import type { Request } from 'express';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors';
 import { buildPageMeta, toSkipTake, type PageMeta } from '../../lib/pagination';
+import { publish } from '../../lib/events';
 import { hasRole } from '../../lib/roles';
 import { deleteStoredFiles } from '../../lib/storage';
 import * as membersRepository from '../members/members.repository';
@@ -74,7 +75,18 @@ export async function createTask(
     input: CreateTaskInput,
 ): Promise<TaskDetail> {
     await assertAssignable(projectId, input.assigneeId);
-    return toDetail(await tasksRepository.createTask({ ...input, projectId, createdById: userId }));
+    const task = toDetail(
+        await tasksRepository.createTask({ ...input, projectId, createdById: userId }),
+    );
+    if (task.assignee) {
+        await publish('task.assigned', {
+            projectId,
+            taskId: task.id,
+            actorId: userId,
+            assigneeId: task.assignee.id,
+        });
+    }
+    return task;
 }
 
 export async function getTask(projectId: string, taskId: string): Promise<TaskDetail> {
@@ -86,6 +98,36 @@ export async function getTask(projectId: string, taskId: string): Promise<TaskDe
 }
 
 /** completedAt follows status: set on entering COMPLETED, cleared on leaving, kept otherwise. */
+/** Fields in `input` whose value differs from the task as it was loaded. */
+function changedFields(before: TaskRef, input: UpdateTaskInput): (keyof UpdateTaskInput)[] {
+    const same = (a: unknown, b: unknown) =>
+        a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b;
+    return (Object.keys(input) as (keyof UpdateTaskInput)[]).filter(
+        (field) => input[field] !== undefined && !same(input[field], before[field]),
+    );
+}
+
+/**
+ * One event per PATCH, most specific first: assigned to someone > completed > other changes.
+ * Nothing is published if no field actually changed.
+ */
+async function publishTaskUpdate(
+    projectId: string,
+    actorId: string,
+    before: TaskRef,
+    input: UpdateTaskInput,
+): Promise<void> {
+    const changed = changedFields(before, input);
+    const base = { projectId, taskId: before.id, actorId };
+    if (changed.includes('assigneeId') && input.assigneeId) {
+        await publish('task.assigned', { ...base, assigneeId: input.assigneeId });
+    } else if (changed.includes('status') && input.status === 'COMPLETED') {
+        await publish('task.completed', base);
+    } else if (changed.length > 0) {
+        await publish('task.updated', { ...base, changedFields: changed });
+    }
+}
+
 function completedAtFor(from: TaskStatus, to: TaskStatus | undefined): Date | null | undefined {
     if (to === undefined || to === from) return undefined;
     return to === 'COMPLETED' ? new Date() : null;
@@ -93,27 +135,31 @@ function completedAtFor(from: TaskStatus, to: TaskStatus | undefined): Date | nu
 
 export async function updateTask(
     projectId: string,
+    actorId: string,
     task: TaskRef,
     input: UpdateTaskInput,
 ): Promise<TaskDetail> {
     await assertAssignable(projectId, input.assigneeId);
 
     const completedAt = completedAtFor(task.status, input.status);
+    let updated: TaskDetailRow;
     try {
-        const updated = await tasksRepository.updateTask(
+        updated = await tasksRepository.updateTask(
             task.id,
             { ...input, ...(completedAt !== undefined ? { completedAt } : {}) },
             // Guard on the status we read, so a concurrent status change can't leave
             // status and completedAt disagreeing (the CHECK constraint would reject it).
             input.status !== undefined ? task.status : undefined,
         );
-        return toDetail(updated);
     } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
             throw new ConflictError('The task changed while you were editing it; reload and retry');
         }
         throw err;
     }
+    // After the write has committed (Prisma's single update is its own transaction).
+    await publishTaskUpdate(projectId, actorId, task, input);
+    return toDetail(updated);
 }
 
 export async function deleteTask(taskId: string): Promise<void> {

@@ -8,6 +8,7 @@ import {
     NotFoundError,
     UnauthorizedError,
 } from '../../lib/errors';
+import { publish } from '../../lib/events';
 import { buildPageMeta, toSkipTake, type PageMeta } from '../../lib/pagination';
 import * as usersRepository from '../users/users.repository';
 import * as invitationsRepository from './invitations.repository';
@@ -50,8 +51,9 @@ export async function createInvitation(
         throw pendingExists();
     }
 
+    let invitation: InvitationRow;
     try {
-        return await invitationsRepository.createInvitation({
+        invitation = await invitationsRepository.createInvitation({
             projectId,
             email,
             role,
@@ -65,6 +67,13 @@ export async function createInvitation(
         }
         throw err;
     }
+    await publish('invitation.created', {
+        projectId,
+        invitationId: invitation.id,
+        email,
+        actorId: actor.userId,
+    });
+    return invitation;
 }
 
 export async function listProjectInvitations(

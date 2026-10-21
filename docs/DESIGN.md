@@ -397,12 +397,12 @@ POST, PATCH and list items return the comment fields (`id, projectId, taskId, au
 
 ### Notifications (optional)
 
-| Method | Path                                  | Notes                                   |
-| ------ | ------------------------------------- | --------------------------------------- |
-| GET    | `/notifications`                      | `?unread=true`, paginated, newest first |
-| GET    | `/notifications/stream`               | SSE stream                              |
-| PATCH  | `/notifications/:notificationId/read` | 204                                     |
-| POST   | `/notifications/read-all`             | 204                                     |
+| Method | Path                                  | Notes                                                              |
+| ------ | ------------------------------------- | ------------------------------------------------------------------ |
+| GET    | `/notifications`                      | `?unread=true\|false`, paginated, newest first; `meta.unreadCount` |
+| GET    | `/notifications/stream`               | SSE stream                                                         |
+| PATCH  | `/notifications/:notificationId/read` | 204, idempotent; not mine → 404                                    |
+| POST   | `/notifications/read-all`             | 204                                                                |
 
 ### AI (optional)
 
@@ -463,12 +463,27 @@ Implementation: an `AppError` base class with subclasses (`NotFoundError`, `Forb
 
 ## 9. Notifications (optional)
 
-1. Services emit domain events on an in-process `EventEmitter` **after the transaction commits**: `task.assigned`, `task.updated`, `task.completed`, `comment.created`, `invitation.created`.
-2. A notifications listener decides recipients (assignee, task creator; never the actor), inserts `notifications` rows, then pushes each to any open SSE connections for that user.
-3. SSE registry: `Map<userId, Set<Response>>`. Send a `: ping` comment every 25 s to keep proxies from closing idle connections. Remove the response on `close`.
-4. Missed events while offline are available from `GET /notifications`.
+1. Services publish domain events on a typed in-process bus (`src/lib/events.ts`) **after their write has committed**, never inside `$transaction`: `task.assigned`, `task.updated`, `task.completed`, `comment.created`, `invitation.created`.
+2. `publish()` **awaits** every handler in turn, each in its own try/catch: a failing handler is logged and never reaches the caller, so a notification problem can't fail or roll back a request. The cost is that notification work adds to the request's latency; a queue (or not awaiting) is the upgrade path if that matters.
+3. **One event per task change**, most specific first: task created with an assignee, or PATCH sets `assigneeId` to a different, non-null user → `task.assigned`; else PATCH moves `status` to COMPLETED → `task.completed`; else any field whose value actually changed → `task.updated` with `changedFields`. Unassigning (`assigneeId: null`) counts as an update; a PATCH whose values are all unchanged publishes nothing.
+4. The notifications listener decides recipients, **never the actor**, de-duplicated:
 
-Limitation to document: the registry is in memory, so this works for a single instance. Scaling out needs Redis pub/sub between instances.
+   | Event                       | Recipients                                 | Type                 |
+   | --------------------------- | ------------------------------------------ | -------------------- |
+   | `task.assigned`             | the assignee                               | `TASK_ASSIGNED`      |
+   | `task.completed`            | task creator, assignee                     | `TASK_COMPLETED`     |
+   | `task.updated`              | task creator, assignee                     | `TASK_UPDATED`       |
+   | `comment.created` (task)    | task creator, assignee                     | `COMMENT_ADDED`      |
+   | `comment.created` (project) | nobody                                     | —                    |
+   | `invitation.created`        | the account with that email, if one exists | `PROJECT_INVITATION` |
+
+   It inserts the rows, then pushes each to the recipient's open SSE streams. The `payload` is a snapshot taken at event time, so later renames don't rewrite history: `actor { id, name }`, `project { id, name }`, `task { id, title }` for task events, plus `changedFields`, `commentId` + `commentPreview` (first 140 characters), or `invitationId` + `role`.
+
+5. Registration is idempotent (`createApp()` calls it; tests build many apps).
+6. SSE: `GET /notifications/stream` sends `text/event-stream` with `Cache-Control: no-cache`, `X-Accel-Buffering: no`, an initial `event: ready`, then `id: <notificationId>` / `event: notification` / `data: <json>` frames, and a `: ping` comment every 25 s to keep proxies from closing idle connections. Registry: `Map<userId, Set<Response>>`; a response is removed (and its timer cleared) on `close`. On shutdown, `closeAllStreams()` ends every stream before `server.close()` so they don't block a graceful exit.
+7. Missed events while offline are available from `GET /notifications` (`?unread=true|false`; `meta` adds `unreadCount`). Marking one read is idempotent and keeps the first `read_at`; someone else's notification is 404.
+
+**Limitation:** the SSE registry and the event bus are in memory, so live pushes reach only clients connected to the same instance as the request that caused them. Scaling out needs Redis pub/sub (or similar) between instances; the stored notifications are unaffected.
 
 SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this API, clients use a fetch-based SSE reader (or curl) with the header. Mention a short-lived `?token=` ticket as the browser-friendly alternative in the README.
 
