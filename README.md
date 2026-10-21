@@ -80,6 +80,10 @@ Base path `/api/v1`. Implemented so far:
 | GET    | `/api/v1/projects/:projectId/attachments/:attachmentId`          | member                      | —                                                                         | 200 attachment metadata                                                                                                 |
 | GET    | `/api/v1/projects/:projectId/attachments/:attachmentId/download` | member                      | —                                                                         | 200 the file, as a download with its original name                                                                      |
 | DELETE | `/api/v1/projects/:projectId/attachments/:attachmentId`          | uploader or ADMIN+          | —                                                                         | 204; the stored file is removed too                                                                                     |
+| GET    | `/api/v1/notifications?unread=&page=&limit=`                     | Bearer                      | —                                                                         | 200 my notifications, newest first, paginated; `meta.unreadCount`                                                       |
+| GET    | `/api/v1/notifications/stream`                                   | Bearer                      | —                                                                         | 200 `text/event-stream` of new notifications (see below)                                                                |
+| PATCH  | `/api/v1/notifications/:notificationId/read`                     | Bearer                      | —                                                                         | 204; idempotent                                                                                                         |
+| POST   | `/api/v1/notifications/read-all`                                 | Bearer                      | —                                                                         | 204                                                                                                                     |
 
 A project in a response has `id, name, description, createdAt, updatedAt, myRole, memberCount`; single-project responses add `owner: { id, name, email }`. Pagination: `page` ≥ 1 (default 1), `limit` 1–100 (default 20).
 
@@ -108,7 +112,7 @@ Comment `body` is trimmed, 1–5000 characters. A `taskId` that isn't in the pro
 
 Attachments: one file per upload, in the form field `file`, up to `MAX_UPLOAD_MB` (10 MB; over → 413). Allowed types: PNG, JPEG, GIF, WebP, PDF, plain text, CSV, zip, Word and Excel (anything else → 415). The type is the one the client declares; the file contents aren't inspected. The original filename is kept for display and downloads only; files are stored under random server-generated names.
 
-The full API, including the optional notifications and AI endpoints, is in [DESIGN.md §7](docs/DESIGN.md#7-api).
+The full API, including the optional AI endpoint, is in [DESIGN.md §7](docs/DESIGN.md#7-api).
 
 ### Permissions
 
@@ -156,12 +160,37 @@ Every response carries an `X-Request-Id` header (an incoming one is reused), mat
 
 ### Postman collection
 
-[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (41 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments and Attachments, Invitations, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
+[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (45 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments and Attachments, Invitations, Notifications, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
 
 - `Auth_Login` stores `access_token`, `refresh_token` and `user_id1`; every other request sends `Bearer {{access_token}}`.
-- Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`, `Upload_Attachment` → `project_attachment_id1`, `Upload_Attachment_For_Task` → `task_attachment_id1`.
+- Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`, `Upload_Attachment` → `project_attachment_id1`, `Upload_Attachment_For_Task` → `task_attachment_id1`, and `Get_Notifications` → `notification_id1` (the newest notification).
+- `Notifications_Stream` opens the SSE stream; Postman shows each event as it arrives. Notifications go to the _other_ users involved, so open the stream as one user and act as another.
 - The upload requests send form-data with a `file` field. After importing, pick a file from your machine for that field (the saved one lives in the author's Postman workspace).
 - A typical run: `Auth_Register` (second user) → `Auth_Login` → `Create_Project` → `Create_Task` → `Create_Invitation` → log in as the invitee → `Accept_Invitation` → the remaining requests.
+
+### Notifications
+
+You get a notification when someone else acts on something that involves you. You're never notified about your own actions.
+
+| What happened                                     | Who is notified          | `type`               |
+| ------------------------------------------------- | ------------------------ | -------------------- |
+| A task is assigned to you (on create or update)   | the new assignee         | `TASK_ASSIGNED`      |
+| A task is completed                               | its creator and assignee | `TASK_COMPLETED`     |
+| A task's other fields change                      | its creator and assignee | `TASK_UPDATED`       |
+| Someone comments on a task                        | its creator and assignee | `COMMENT_ADDED`      |
+| You're invited to a project (and have an account) | you                      | `PROJECT_INVITATION` |
+
+One task update produces one notification type: assignment beats completion, which beats other changes. Project-level comments don't notify anyone. Each notification's `payload` keeps the names as they were at the time (`actor`, `project`, `task`, plus `changedFields`, a comment preview, or the invited role).
+
+**Live updates (SSE):** `GET /api/v1/notifications/stream` keeps the connection open and sends `event: notification` with the notification as JSON whenever a new one is created, plus a `: ping` comment every 25 s. Anything missed while disconnected is in `GET /api/v1/notifications`.
+
+```bash
+curl -N -H "Authorization: Bearer <accessToken>" http://localhost:3000/api/v1/notifications/stream
+```
+
+The browser's `EventSource` can't send an `Authorization` header, so use a fetch-based SSE reader (or curl) that can. A browser-friendly alternative would be a short-lived, single-use `?token=` ticket issued by an authenticated endpoint; it isn't implemented here.
+
+**Limitation:** open streams are tracked in memory, so live pushes only reach clients connected to the same server instance. Running several instances would need a shared channel such as Redis pub/sub; stored notifications aren't affected.
 
 ## Authentication
 
