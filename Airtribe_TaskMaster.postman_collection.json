@@ -377,7 +377,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"currentPassword\": \"New@1234\",\r\n    \"newPassword\": \"Test@123\"\r\n}",
+							"raw": "{\r\n    \"currentPassword\": \"Test@123\",\r\n    \"newPassword\": \"New@1234\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1142,19 +1142,23 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{v1_url}}/projects/{{project_id1}}/comments?taskId={{task_id1}}",
+											"raw": "http://localhost:3000/api/v1/projects//comments?taskId=a107f7b1-8775-4f1e-ab19-175a791886ba",
+											"protocol": "http",
 											"host": [
-												"{{v1_url}}"
+												"localhost"
 											],
+											"port": "3000",
 											"path": [
+												"api",
+												"v1",
 												"projects",
-												"{{project_id1}}",
+												"",
 												"comments"
 											],
 											"query": [
 												{
 													"key": "taskId",
-													"value": "{{task_id1}}"
+													"value": "a107f7b1-8775-4f1e-ab19-175a791886ba"
 												},
 												{
 													"key": "page",
@@ -1416,15 +1420,19 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}",
+											"raw": "http://localhost:3000/api/v1/projects//comments/",
+											"protocol": "http",
 											"host": [
-												"{{v1_url}}"
+												"localhost"
 											],
+											"port": "3000",
 											"path": [
+												"api",
+												"v1",
 												"projects",
-												"{{project_id1}}",
+												"",
 												"comments",
-												"{{comment_id1}}"
+												""
 											]
 										}
 									},
@@ -1697,6 +1705,1692 @@
 										"{{project_id1}}",
 										"comments",
 										"{{comment_id1}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Attachments",
+					"item": [
+						{
+							"name": "Upload_Attachment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"project_attachment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+										},
+										{
+											"key": "taskId",
+											"value": "",
+											"type": "text",
+											"disabled": true
+										}
+									]
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Upload_Attachment",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "776a759a-a94b-4ca4-98df-7b2caf733918"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "277"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"115-m/dY3ltMkOhK/pTI+8p2iElRxXM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:36:38 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": null,\n        \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Unsupported_Media_Type",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "/E:/Games/Modded Stardew Valley/Stardew Valley.exe"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Unsupported Media Type",
+									"code": 415,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "e43fb8d1-dbc4-492f-9c9a-55790e706a53"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "159"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"9f-2yKVOtKGz9iRNH3w/w4A3ljgzcE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:50:22 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"UNSUPPORTED_MEDIA_TYPE\",\n        \"message\": \"File type application/x-msdos-program is not allowed\",\n        \"requestId\": \"e43fb8d1-dbc4-492f-9c9a-55790e706a53\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Missing_Key",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "b0fb803a-136a-4478-a029-f992cfaa101e"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "114"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"72-XNVHmVn6GM9ZxKfOdYa3/M5YpCU\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:52:49 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"BAD_REQUEST\",\n        \"message\": \"Field name missing\",\n        \"requestId\": \"b0fb803a-136a-4478-a029-f992cfaa101e\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Wrong_Key",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "document",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "4642377f-d778-4333-a4f8-bb8a3da218ea"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "117"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"75-N+pbw8wUYDEL0AbvJQ+tOrX6CdE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:53:16 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"BAD_REQUEST\",\n        \"message\": \"Unexpected file field\",\n        \"requestId\": \"4642377f-d778-4333-a4f8-bb8a3da218ea\"\n    }\n}"
+								},
+								{
+									"name": "Upload_Attachment_Missing_File",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": []
+												},
+												{
+													"key": "taskId",
+													"value": "",
+													"type": "text",
+													"disabled": true
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Unprocessable Entity",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "18339435-78f5-482f-afcc-d189b179032f"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "189"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"bd-+v3SflkLXor+WMQk7R09VtPxwaY\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:53:58 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Request validation failed\",\n        \"details\": [\n            {\n                \"path\": \"\",\n                \"message\": \"Unrecognized key: \\\"file\\\"\"\n            }\n        ],\n        \"requestId\": \"18339435-78f5-482f-afcc-d189b179032f\"\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Upload_Attachment_For_Task",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.collectionVariables.set(\"task_attachment_id1\", pm.response.json().data.id)"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+										},
+										{
+											"key": "taskId",
+											"value": "{{task_id1}}",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Upload_Attachment",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "file",
+													"type": "file",
+													"src": "postman-cloud:///1f1cd197-def0-4950-acd5-6065d7806adf"
+												},
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}",
+													"type": "text"
+												}
+											]
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "7260ea1b-7d6c-4561-a6f2-e9d7be31f759"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "311"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"137-jYSGnbpof4E1FZjnqJKQtVUUZnE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:37:24 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n        \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get_Attachments",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments"
+									],
+									"query": [
+										{
+											"key": "taskId",
+											"value": "none",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Attachments",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": null,
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": null,
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": null,
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "b53f4991-916d-43da-b09b-304966c1b906"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "636"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"27c-c/FljqcljEILRyqX8iz7Pn01MOM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:39:49 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        },\n        {\n            \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": null,\n            \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 2,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_By_TaskId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?taskId={{task_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}"
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "1a731e38-e644-4d3b-93a5-f75f300b39fe"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "367"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"16f-4XoxdbORWbrrD3Q9NlSQFvtTVTA\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:40:15 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_For_TaskID_None",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?taskId=none",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "none"
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "de1550d3-e14f-43fc-957d-95f84def6e58"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "333"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"14d-UgZqMn3KFa2wQIV4LzWqS2D/+Bo\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:41:04 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n            \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n            \"mimeType\": \"application/pdf\",\n            \"sizeBytes\": 322401,\n            \"taskId\": null,\n            \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n            \"uploadedBy\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Attachments_Invalid_Query_Param",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments?foo_bar",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "none",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "foo_bar",
+													"value": null
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "c352c058-86f3-45cd-bb2b-57fa208c5cad"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "192"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"c0-nBwaW4i+wTTKv31IGCONw1N0rk0\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:41:43 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Request validation failed\",\n        \"details\": [\n            {\n                \"path\": \"\",\n                \"message\": \"Unrecognized key: \\\"foo_bar\\\"\"\n            }\n        ],\n        \"requestId\": \"c352c058-86f3-45cd-bb2b-57fa208c5cad\"\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Get_Attachment_By_AttachmentID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Get_Project_Attachment",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{project_attachment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments",
+												"{{project_attachment_id1}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "34cec649-9733-47ae-80c1-523a9db36caf"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "277"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"115-m/dY3ltMkOhK/pTI+8p2iElRxXM\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:43:34 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"b889c1cd-70dc-4c6f-8edc-55465f9c99c6\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": null,\n        \"createdAt\": \"2026-10-21T06:36:38.202Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								},
+								{
+									"name": "Get_Task_Attachment",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"attachments",
+												"{{task_attachment_id1}}"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "510a98fb-4c63-4360-a344-1ec66422c2ae"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "311"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"137-jYSGnbpof4E1FZjnqJKQtVUUZnE\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 21 Oct 2026 06:44:04 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": {\n        \"id\": \"8042d4a5-c129-479c-8e73-1bdaad5aaec7\",\n        \"originalName\": \"Utkarsh_Vats_Resume_9.pdf\",\n        \"mimeType\": \"application/pdf\",\n        \"sizeBytes\": 322401,\n        \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n        \"createdAt\": \"2026-10-21T06:37:24.532Z\",\n        \"uploadedBy\": {\n            \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"name\": \"test user1\"\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "Download_Attachment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}/download",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}",
+										"download"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete_Attachment",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{access_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{v1_url}}/projects/{{project_id1}}/attachments/{{task_attachment_id1}}",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"projects",
+										"{{project_id1}}",
+										"attachments",
+										"{{task_attachment_id1}}"
 									]
 								}
 							},
@@ -2136,6 +3830,14 @@
 		},
 		{
 			"key": "project_comment_id1",
+			"value": ""
+		},
+		{
+			"key": "project_attachment_id1",
+			"value": ""
+		},
+		{
+			"key": "task_attachment_id1",
 			"value": ""
 		}
 	]
