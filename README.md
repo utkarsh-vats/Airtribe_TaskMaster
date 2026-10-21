@@ -4,7 +4,7 @@ A collaborative task-tracking REST API. Users create projects, invite teammates,
 
 **Stack:** Node.js 22, TypeScript, Express 5, PostgreSQL 18, Prisma 6, Zod, Vitest
 
-> 🚧 Work in progress. The full design is in [docs/DESIGN.md](docs/DESIGN.md).
+> 🚧 All features in the design are implemented, including the optional live notifications and AI task descriptions; final submission polish is in progress. The full design is in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Prerequisites
 
@@ -163,10 +163,11 @@ Every response carries an `X-Request-Id` header (an incoming one is reused), mat
 
 ### Postman collection
 
-[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (45 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments and Attachments, Invitations, Notifications, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
+[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (46 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments and Attachments, Invitations, Notifications, AI, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
 
 - `Auth_Login` stores `access_token`, `refresh_token` and `user_id1`; every other request sends `Bearer {{access_token}}`.
 - Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`, `Upload_Attachment` → `project_attachment_id1`, `Upload_Attachment_For_Task` → `task_attachment_id1`, and `Get_Notifications` → `notification_id1` (the newest notification).
+- `Generate_Task_Description` calls whichever AI provider `.env` configures (see [Configuration](#configuration)); with none configured it returns 503, and with one it spends real API credit.
 - `Notifications_Stream` opens the SSE stream; Postman shows each event as it arrives. Notifications go to the _other_ users involved, so open the stream as one user and act as another.
 - The upload requests send form-data with a `file` field. After importing, pick a file from your machine for that field (the saved one lives in the author's Postman workspace).
 - A typical run: `Auth_Register` (second user) → `Auth_Login` → `Create_Project` → `Create_Task` → `Create_Invitation` → log in as the invitee → `Accept_Invitation` → the remaining requests.
@@ -214,6 +215,17 @@ The browser's `EventSource` can't send an `Authorization` header, so use a fetch
 
 - Logout can't revoke an access token that was already issued: it stays valid until it expires (at most 15 minutes). A `jti` denylist is the upgrade path.
 - Refresh tokens travel in the JSON body because this is an API-only project. A browser app should receive them in an `httpOnly`, `Secure`, `SameSite` cookie instead so page scripts can't read them.
+
+## Known limitations
+
+- **Logout doesn't end access tokens early:** an access token stays valid until it expires (at most 15 minutes). A `jti` denylist is the upgrade path.
+- **Live notifications are single-instance:** SSE streams are tracked in memory, so pushes only reach clients connected to the same server. Several instances would need Redis pub/sub or similar; stored notifications are unaffected.
+- **Browsers can't open the SSE stream with `EventSource`,** which can't send the `Authorization` header; use a fetch-based reader. A short-lived `?token=` ticket is the browser-friendly alternative (not implemented).
+- **Files are stored on local disk** under `UPLOAD_DIR`, so they live on one server. The storage layer is an interface (`StorageDriver`), so an S3 driver can replace it.
+- **Upload types are trusted as declared:** the MIME type is the one the client sends; file contents aren't inspected. Downloads are always served as attachments with `X-Content-Type-Options: nosniff`.
+- **No email delivery:** invitations are only visible in the app (`GET /users/me/invitations`) once the invitee has an account with that email.
+- **Retrying a token refresh logs you out everywhere:** reusing a refresh token that was already rotated is treated as theft and revokes all sessions, so clients must not retry a refresh with the same token.
+- **AI suggestions depend on a third-party API:** with no provider configured the endpoint returns 503; a slow or failing provider returns 502 after at most 10 s.
 
 ## Configuration
 

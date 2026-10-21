@@ -3871,6 +3871,170 @@
 			]
 		},
 		{
+			"name": "AI",
+			"item": [
+				{
+					"name": "Generate_Task_Description",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"Add CSV export\",\r\n    \"notes\": \"Admins only; include archived tasks\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{v1_url}}/ai/task-description",
+							"host": [
+								"{{v1_url}}"
+							],
+							"path": [
+								"ai",
+								"task-description"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Task_Description",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Add CSV export\",\r\n    \"notes\": \"Admins only; include archived tasks\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{v1_url}}/ai/task-description",
+									"host": [
+										"{{v1_url}}"
+									],
+									"path": [
+										"ai",
+										"task-description"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "X-Request-Id",
+									"value": "7d85c4c7-6f01-45e8-b050-d21ea997ba31"
+								},
+								{
+									"key": "Content-Security-Policy",
+									"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+								},
+								{
+									"key": "Cross-Origin-Opener-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Cross-Origin-Resource-Policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "Origin-Agent-Cluster",
+									"value": "?1"
+								},
+								{
+									"key": "Referrer-Policy",
+									"value": "no-referrer"
+								},
+								{
+									"key": "Strict-Transport-Security",
+									"value": "max-age=31536000; includeSubDomains"
+								},
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-DNS-Prefetch-Control",
+									"value": "off"
+								},
+								{
+									"key": "X-Download-Options",
+									"value": "noopen"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "SAMEORIGIN"
+								},
+								{
+									"key": "X-Permitted-Cross-Domain-Policies",
+									"value": "none"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "RateLimit",
+									"value": "\"10-in-1min\"; r=9; t=60"
+								},
+								{
+									"key": "RateLimit-Policy",
+									"value": "\"10-in-1min\"; q=10; w=60; pk=:YmM5MjU1YjFmZjAw:"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "463"
+								},
+								{
+									"key": "ETag",
+									"value": "W/\"1cf-2RXmHFwTksZmZ9STt5r42NLG5Qw\""
+								},
+								{
+									"key": "Date",
+									"value": "Wed, 21 Oct 2026 08:05:20 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"description\": \"Provide admin users with the ability to export task data, including archived items, to a CSV file.\\n- Restrict access to the CSV export functionality strictly to admin users.\\n- Add an export option to the task management interface visible only to authorized users.\\n- Include both active and archived tasks in the exported CSV dataset.\\n- Ensure the exported CSV file downloads properly with accurate column headers and formatted data.\"\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "health",
 			"request": {
 				"method": "GET",
