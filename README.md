@@ -1,10 +1,146 @@
 # TaskMaster
 
+[![CI](https://github.com/utkarsh-vats/Airtribe_TaskMaster/actions/workflows/ci.yml/badge.svg)](https://github.com/utkarsh-vats/Airtribe_TaskMaster/actions/workflows/ci.yml)
+
 A collaborative task-tracking REST API. Users create projects, invite teammates, and work on tasks together through assignments, comments and attachments.
 
 **Stack:** Node.js 22, TypeScript, Express 5, PostgreSQL 18, Prisma 6, Zod, Vitest
 
-> 🚧 All features in the design are implemented, including the optional live notifications and AI task descriptions; final submission polish is in progress. The full design is in [docs/DESIGN.md](docs/DESIGN.md).
+All required user stories are implemented, plus the optional live notifications (SSE) and AI task descriptions. Full design: [docs/DESIGN.md](docs/DESIGN.md).
+
+## User stories
+
+All paths are under `/api/v1`.
+
+| #   | User story                                           | Implemented by                                                                                                                       |
+| --- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Create an account                                    | `POST /auth/register`                                                                                                                |
+| 2   | Log in                                               | `POST /auth/login` (and `POST /auth/refresh` to stay logged in)                                                                      |
+| 3   | View and update my profile                           | `GET /users/me`, `PATCH /users/me`, `PATCH /users/me/password`                                                                       |
+| 4   | Create a task with a title, description and due date | `POST /projects/:projectId/tasks`                                                                                                    |
+| 5   | View the tasks assigned to me                        | `GET /users/me/tasks` (all my projects), `GET /projects/:projectId/tasks?assignee=me`                                                |
+| 6   | Mark a task as completed                             | `PATCH /projects/:projectId/tasks/:taskId` with `{ "status": "COMPLETED" }`                                                          |
+| 7   | Assign a task to a team member                       | `assigneeId` on `POST /projects/:projectId/tasks` or `PATCH /projects/:projectId/tasks/:taskId`                                      |
+| 8   | Filter tasks by status                               | `GET /projects/:projectId/tasks?status=OPEN,IN_PROGRESS` (also on `/users/me/tasks`)                                                 |
+| 9   | Search tasks by title or description                 | `GET /projects/:projectId/tasks?q=…` (also on `/users/me/tasks`)                                                                     |
+| 10  | Comment on tasks and attach files                    | `/projects/:projectId/comments` and `/projects/:projectId/attachments` (with `taskId`, or project-level without)                     |
+| 11  | Create a team (project) and invite members           | `POST /projects`, `POST /projects/:projectId/invitations`, `GET /users/me/invitations`, `POST /invitations/:invitationId/accept`     |
+| 12  | Log out                                              | `POST /auth/logout` (this session), `POST /auth/logout-all` (every session)                                                          |
+| 13  | Notifications (optional)                             | `GET /notifications`, `GET /notifications/stream` (SSE), `PATCH /notifications/:notificationId/read`, `POST /notifications/read-all` |
+| 14  | AI-generated task descriptions (optional)            | `POST /ai/task-description`                                                                                                          |
+
+## Architecture
+
+Each request flows **routes → middleware → controller → service → repository**. Middleware handles cross-cutting checks: `authenticate` (bearer token), `validate` (Zod schemas for body, params and query), and on project routes `loadMembership` (non-members get 404) and `requireRole` (403 below the required role). Controllers only translate HTTP; services hold business rules, permission checks and transactions; repositories are the only layer that talks to the database (Prisma). Each feature is a module under `src/modules/` (auth, users, projects, members, tasks, comments, attachments, notifications, ai).
+
+```mermaid
+erDiagram
+    USERS ||--o{ REFRESH_TOKENS : "owns"
+    USERS ||--o{ PROJECT_MEMBERS : "belongs via"
+    PROJECTS ||--o{ PROJECT_MEMBERS : "has"
+    USERS ||--o{ PROJECTS : "created"
+    PROJECTS ||--o{ PROJECT_INVITATIONS : "issues"
+    USERS ||--o{ PROJECT_INVITATIONS : "sent"
+    PROJECTS ||--o{ TASKS : "contains"
+    USERS ||--o{ TASKS : "created"
+    USERS |o--o{ TASKS : "assigned to"
+    PROJECTS ||--o{ COMMENTS : "contains"
+    TASKS |o--o{ COMMENTS : "optionally on"
+    USERS ||--o{ COMMENTS : "authored"
+    PROJECTS ||--o{ ATTACHMENTS : "contains"
+    TASKS |o--o{ ATTACHMENTS : "optionally on"
+    USERS ||--o{ ATTACHMENTS : "uploaded"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+
+    USERS {
+        uuid id PK
+        text email UK "stored lowercase"
+        text password_hash
+        text name
+        text bio "nullable"
+        text avatar_url "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    REFRESH_TOKENS {
+        uuid id PK
+        uuid user_id FK
+        text token_hash UK "sha256 of opaque token"
+        timestamptz expires_at
+        timestamptz revoked_at "nullable"
+        text user_agent "nullable"
+        timestamptz created_at
+    }
+    PROJECTS {
+        uuid id PK
+        text name
+        text description "nullable"
+        uuid created_by FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    PROJECT_MEMBERS {
+        uuid project_id PK, FK
+        uuid user_id PK, FK
+        enum role "OWNER | ADMIN | MEMBER"
+        timestamptz joined_at
+    }
+    PROJECT_INVITATIONS {
+        uuid id PK
+        uuid project_id FK
+        text email "invitee, lowercase"
+        enum role "ADMIN | MEMBER"
+        enum status "PENDING | ACCEPTED | DECLINED | REVOKED | EXPIRED"
+        uuid invited_by FK
+        timestamptz expires_at
+        timestamptz responded_at "nullable"
+        timestamptz created_at
+    }
+    TASKS {
+        uuid id PK
+        uuid project_id FK
+        varchar title "max 200"
+        text description "nullable"
+        enum status "OPEN | IN_PROGRESS | COMPLETED"
+        enum priority "LOW | MEDIUM | HIGH | URGENT"
+        timestamptz due_date "nullable"
+        uuid created_by FK
+        uuid assignee_id FK "nullable"
+        timestamptz completed_at "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    COMMENTS {
+        uuid id PK
+        uuid project_id FK
+        uuid task_id FK "nullable = project-level"
+        uuid author_id FK
+        text body
+        timestamptz edited_at "nullable"
+        timestamptz created_at
+    }
+    ATTACHMENTS {
+        uuid id PK
+        uuid project_id FK
+        uuid task_id FK "nullable = project-level"
+        uuid uploaded_by FK
+        text original_name
+        text storage_key UK
+        text mime_type
+        int size_bytes
+        timestamptz created_at
+    }
+    NOTIFICATIONS {
+        uuid id PK
+        uuid recipient_id FK
+        enum type
+        uuid project_id "no FK, survives deletes"
+        uuid task_id "no FK, survives deletes"
+        jsonb payload "snapshot: titles, actor name"
+        timestamptz read_at "nullable"
+        timestamptz created_at
+    }
+```
 
 ## Prerequisites
 
@@ -15,6 +151,7 @@ A collaborative task-tracking REST API. Users create projects, invite teammates,
 
 ```bash
 cp .env.example .env          # set POSTGRES_PASSWORD and JWT_ACCESS_SECRET
+cp .env.test.example .env.test   # test database config
 docker compose up -d          # Postgres 18.3 on localhost:5434, with `taskmaster` and `taskmaster_test` databases
 npm install                   # also runs `prisma generate`
 npm run db:migrate            # apply migrations to the dev database
@@ -24,24 +161,24 @@ npm run dev                   # http://localhost:3000/health
 
 ## Tests
 
-Tests run against a real PostgreSQL database (`<POSTGRES_DB>_test`). `.env.test` is loaded before `.env`, so tests reuse your Postgres credentials but never touch the dev database.
+Tests run against a real PostgreSQL database (`taskmaster_test`, created by the Compose init script) configured in `.env.test`; credentials not set there come from `.env`. `resetDb()` refuses to run against any database whose name doesn't end in `_test`.
 
 ```bash
 npm run test:db               # apply migrations to the test database (after any new migration)
 npm test
 ```
 
-Set LOG_LEVEL=error to see server errors while running tests (e.g. `$env:LOG_LEVEL='error'; npm test` in PowerShell).
+Set `LOG_LEVEL=error` to see server errors while running tests (e.g. `$env:LOG_LEVEL='error'; npm test` in PowerShell).
 
 Tests are silent by default only while `LOG_LEVEL` is unset, so keep it out of `.env` (it defaults to `info` for the dev server anyway). Under `NODE_ENV=test`, passwords are hashed with the cheapest argon2id parameters the library allows to keep the suite fast; other environments use the library defaults.
 
 ## API
 
-Base path `/api/v1`. Implemented so far:
+Base path `/api/v1`. Endpoints:
 
 | Method | Path                                                             | Auth                        | Body                                                                      | Success                                                                                                                 |
 | ------ | ---------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/health` (no base path)                                         | —                           | —                                                                         | 200 `{ status, db }` (503 if the database is down)                                                                      |
+| GET    | `/health` (no base path)                                         | —                           | —                                                                         | 200 `{ data: { status, db } }` (503 if the database is down)                                                            |
 | POST   | `/api/v1/auth/register`                                          | —                           | `{ email, password, name }`                                               | 201 user                                                                                                                |
 | POST   | `/api/v1/auth/login`                                             | —                           | `{ email, password }`                                                     | 200 `{ accessToken, refreshToken, expiresIn, tokenType, user }`                                                         |
 | POST   | `/api/v1/auth/refresh`                                           | —                           | `{ refreshToken }`                                                        | 200 new `{ accessToken, refreshToken, expiresIn, tokenType }`                                                           |
@@ -152,12 +289,12 @@ Success bodies are `{ "data": ... }`, plus `"meta": { page, limit, total, totalP
 | 409  | `CONFLICT` (e.g. email already registered, already a member, invitation no longer pending, task status changed by someone else) |
 | 410  | `INVITATION_EXPIRED` (accepting or declining an expired invitation)                                                             |
 | 413  | `PAYLOAD_TOO_LARGE` (upload over `MAX_UPLOAD_MB`, or a JSON body over 1 MB)                                                     |
-| 415  | `UNSUPPORTED_MEDIA_TYPE` (upload type not in the allowlist)                                                                     |     |
+| 415  | `UNSUPPORTED_MEDIA_TYPE` (upload type not in the allowlist)                                                                     |
 | 422  | `VALIDATION_ERROR` (body, params or query failed validation; unknown fields too)                                                |
 | 429  | `RATE_LIMITED`                                                                                                                  |
 | 500  | `INTERNAL_ERROR` (no stack traces are ever sent)                                                                                |
 | 502  | `AI_UPSTREAM_ERROR` (the AI provider failed or took longer than 10 s)                                                           |
-| 503  | `AI_DISABLED` (no AI provider configured)                                                                                       |     |
+| 503  | `AI_DISABLED` (no AI provider configured)                                                                                       |
 
 Every response carries an `X-Request-Id` header (an incoming one is reused), matching `requestId` in errors and the logs.
 
@@ -225,6 +362,7 @@ The browser's `EventSource` can't send an `Authorization` header, so use a fetch
 - **Upload types are trusted as declared:** the MIME type is the one the client sends; file contents aren't inspected. Downloads are always served as attachments with `X-Content-Type-Options: nosniff`.
 - **No email delivery:** invitations are only visible in the app (`GET /users/me/invitations`) once the invitee has an account with that email.
 - **Retrying a token refresh logs you out everywhere:** reusing a refresh token that was already rotated is treated as theft and revokes all sessions, so clients must not retry a refresh with the same token.
+- **Assignment vs. removal race:** if a member is removed at the same moment a task is being assigned to them, the task can end up assigned to a non-member; fixing it needs row locking in a transaction.
 - **AI suggestions depend on a third-party API:** with no provider configured the endpoint returns 503; a slow or failing provider returns 502 after at most 10 s.
 
 ## Configuration
@@ -237,7 +375,7 @@ Uploaded files are stored on local disk under `UPLOAD_DIR` (default `./uploads`,
 
 | `AI_PROVIDER` | Get an API key                                                              | `AI_MODEL`                                                                            |
 | ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `anthropic`   | [Anthropic Console](https://console.anthropic.com/settings/keys) → API keys | a Claude model id, e.g. `claude-opus-5-5`                                             |
+| `anthropic`   | [Anthropic Console](https://console.anthropic.com/settings/keys) → API keys | a Claude model id, e.g. `claude-haiku-5-5` (fast and cheap for short descriptions)    |
 | `gemini`      | [Google AI Studio](https://aistudio.google.com/apikey) → Get API key        | a Gemini model id from the [model list](https://ai.google.dev/gemini-api/docs/models) |
 
 Set `AI_PROVIDER`, `AI_API_KEY` and `AI_MODEL` together; the server refuses to start if a provider is set without the other two. Leave `AI_PROVIDER` empty to turn the feature off (503 `AI_DISABLED`). Tests never call a real provider, whatever `.env` says.
