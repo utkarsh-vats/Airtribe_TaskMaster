@@ -6,6 +6,7 @@ const commentFields = {
     projectId: true,
     taskId: true,
     authorId: true,
+    parentId: true,
     body: true,
     editedAt: true,
     createdAt: true,
@@ -51,6 +52,7 @@ export async function createComment(data: {
     projectId: string;
     taskId?: string | null;
     authorId: string;
+    parentId?: string | null;
     body: string;
 }): Promise<CommentRow> {
     return prisma.comment.create({ data, select: commentSelect });
@@ -89,7 +91,7 @@ export async function findCommentRef({
 }) {
     return prisma.comment.findUnique({
         where: { id: commentId, projectId },
-        select: { id: true, projectId: true, taskId: true, authorId: true },
+        select: { id: true, projectId: true, taskId: true, authorId: true, parentId: true },
     });
 }
 

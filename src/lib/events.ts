@@ -15,6 +15,7 @@ export interface DomainEvents {
         taskId: string | null;
         commentId: string;
         actorId: string;
+        parentId: string | null;
     };
     'invitation.created': {
         projectId: string;

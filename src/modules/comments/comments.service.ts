@@ -1,6 +1,6 @@
 import type { Prisma, ProjectRole } from '@prisma/client';
 import type { Request } from 'express';
-import { ForbiddenError, NotFoundError } from '../../lib/errors';
+import { ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors';
 import { buildPageMeta, toSkipTake, type PageMeta } from '../../lib/pagination';
 import { publish } from '../../lib/events';
 import { hasRole } from '../../lib/roles';
@@ -62,9 +62,31 @@ export async function createComment(
     if (input.taskId) {
         await assertTaskInProject(projectId, input.taskId);
     }
+    let taskId = input.taskId ?? null;
+    if (input.parentId) {
+        const parent = await commentRepository.findCommentRef({
+            projectId,
+            commentId: input.parentId,
+        });
+        if (!parent) {
+            throw new NotFoundError('Parent comment');
+        }
+        if (parent.parentId !== null) {
+            throw new ValidationError([
+                { path: 'parentId', message: 'Nested comments are not allowed.' },
+            ]);
+        }
+        if (input.taskId !== undefined && parent.taskId !== input.taskId) {
+            throw new ValidationError([
+                { path: 'taskId', message: 'Parent comment and reply must be in the same task.' },
+            ]);
+        }
+        taskId = parent.taskId;
+    }
     const comment = await commentRepository.createComment({
         ...input,
         projectId,
+        taskId,
         authorId: userId,
     });
     await publish('comment.created', {
@@ -72,6 +94,7 @@ export async function createComment(
         taskId: comment.taskId,
         commentId: comment.id,
         actorId: userId,
+        parentId: comment.parentId,
     });
     return comment;
 }
@@ -133,14 +156,24 @@ export async function listProjectComments(
     const taskFilter: Prisma.CommentWhereInput =
         query.taskId === 'none' ? { taskId: null } : query.taskId ? { taskId: query.taskId } : {};
 
+    const parentFilter: Prisma.CommentWhereInput =
+        query.parentId === 'none'
+            ? { parentId: null }
+            : query.parentId
+              ? { parentId: query.parentId }
+              : {};
+
     const where: Prisma.CommentWhereInput = {
         projectId,
         ...taskFilter,
+        ...parentFilter,
     };
+
+    const orderBy = [{ createdAt: query.order }, { id: query.order }];
 
     const { rows, total } = await commentRepository.listComments({
         where,
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        orderBy,
         skip,
         take,
     });

@@ -26,6 +26,7 @@ declare global {
                 projectId: string;
                 taskId: string | null;
                 authorId: string;
+                parentId: string | null;
             };
             /** Set by the attachments module's `loadAttachment()` once the caller may act on it. */
             attachment?: {

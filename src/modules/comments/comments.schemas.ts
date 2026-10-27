@@ -6,10 +6,12 @@ export const commentIdParamSchema = uuidParam('commentId');
 
 export const bodySchema = z.string().trim().min(1).max(5000);
 export const taskId = z.uuid().nullable();
+export const parentId = z.uuid().nullable();
 
 export const createCommentBodySchema = z.strictObject({
     body: bodySchema,
     taskId: taskId.optional(),
+    parentId: parentId.optional(),
 });
 
 export const updateCommentBodySchema = z.strictObject({
@@ -25,6 +27,8 @@ export const updateCommentBodySchema = z.strictObject({
 export const listCommentsQuerySchema = z.strictObject({
     ...paginationQuerySchema.shape,
     taskId: z.union([z.uuid(), z.literal('none')]).optional(),
+    parentId: z.union([z.uuid(), z.literal('none')]).optional(),
+    order: z.enum(['asc', 'desc']).default('asc'),
 });
 
 export type CreateCommentInput = z.infer<typeof createCommentBodySchema>;

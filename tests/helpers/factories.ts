@@ -131,17 +131,23 @@ export function createTask(
     });
 }
 
-/** A comment in `projectId`, project-level unless `taskId` is given. */
+/** A comment in `projectId`, project-level unless `taskId` is given; a reply if `parentId` is. */
 export function createComment(
     projectId: string,
     authorId: string,
-    overrides: { taskId?: string | null; body?: string; createdAt?: Date } = {},
+    overrides: {
+        taskId?: string | null;
+        parentId?: string | null;
+        body?: string;
+        createdAt?: Date;
+    } = {},
 ): Promise<Comment> {
     return prisma.comment.create({
         data: {
             projectId,
             authorId,
             taskId: overrides.taskId ?? null,
+            parentId: overrides.parentId ?? null,
             body: overrides.body ?? `Comment ${randomUUID().slice(0, 8)}`,
             ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
         },
