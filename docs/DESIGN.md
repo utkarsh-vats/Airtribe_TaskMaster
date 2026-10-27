@@ -70,6 +70,7 @@ erDiagram
     PROJECTS ||--o{ COMMENTS : "contains"
     TASKS |o--o{ COMMENTS : "optionally on"
     USERS ||--o{ COMMENTS : "authored"
+    COMMENTS |o--o{ COMMENTS : "replies to"
     PROJECTS ||--o{ ATTACHMENTS : "contains"
     TASKS |o--o{ ATTACHMENTS : "optionally on"
     USERS ||--o{ ATTACHMENTS : "uploaded"
@@ -138,6 +139,7 @@ erDiagram
         uuid project_id FK
         uuid task_id FK "nullable = project-level"
         uuid author_id FK
+        uuid parent_id FK "nullable = top-level"
         text body
         timestamptz edited_at "nullable"
         timestamptz created_at
@@ -171,6 +173,7 @@ erDiagram
 - **Ownership** is a membership role, not a column on `projects`. A partial unique index guarantees exactly one OWNER per project. `projects.created_by` is kept for audit only.
 - **Tasks** belong to exactly one project. `assignee_id` is nullable and must reference a current member of that project.
 - **Comments and attachments** always belong to a project. `task_id` is optional: null means project-level, set means task-level. A composite FK `(task_id, project_id) → tasks(id, project_id)` makes it impossible for a comment to point at a task in a different project.
+- **Replies** are comments with `parent_id` set. A composite FK `(parent_id, project_id) → comments(id, project_id)` keeps a reply in its parent's project; one-level nesting and the inherited `task_id` are enforced in the service.
 - **Notifications** keep plain `project_id`/`task_id` columns (no FKs) plus a JSON snapshot, so history survives when a task or project is deleted.
 
 ---
@@ -198,6 +201,8 @@ erDiagram
 - One-owner partial unique index (Appendix B).
 - Removing a member (or a member leaving) unassigns their open tasks in the same transaction. Their comments and attachments stay.
 - The OWNER cannot leave or be removed; ownership must be transferred first (`PATCH member role` to OWNER demotes the current owner to ADMIN in one transaction).
+- Transfer order: demote the current owner to ADMIN **first**, then promote the target. The one-owner partial unique index is checked per statement, so promoting first fails even inside the transaction. The demotion is guarded on `role = OWNER` so a concurrent transfer gets 409.
+- Nobody can change their own role (409); the OWNER changes others' roles or transfers ownership.
 
 ### project_invitations
 
@@ -205,7 +210,10 @@ erDiagram
 - Only one PENDING invitation per `(project_id, email)` (partial unique index).
 - Expiry is checked lazily: a PENDING invitation past `expires_at` is treated as EXPIRED. Before creating a new invite, mark stale pending rows for the same pair as EXPIRED so the unique index doesn't block it.
 - Cannot invite someone who is already a member (409). Role OWNER is not allowed in invitations.
+- Only the OWNER may invite with role ADMIN (ADMIN inviting an ADMIN → 403), so granting ADMIN stays owner-only, same as changing roles.
 - Accept: in one transaction, set status ACCEPTED + `responded_at`, insert into `project_members`.
+- Accept/decline checks, in order: invitation email ≠ caller's email → 404 (existence not revealed); not PENDING → 409; past `expires_at` → 410 `INVITATION_EXPIRED`; (accept only) already a member → 409. The status change is an `updateMany` guarded on `status = PENDING`, so only one of two concurrent responses wins.
+- Revoke: only an unexpired PENDING invitation can be revoked (else 409); `responded_at` stays null because the invitee didn't respond.
 
 ### tasks
 
@@ -217,15 +225,19 @@ erDiagram
 
 ### comments
 
-- Task-level comments cascade-delete with the task; project-level comments cascade with the project.
+- Task-level comments cascade-delete with the task; project-level comments cascade with the project. Replies cascade-delete with their parent.
 - Edit sets `edited_at`. Edit is author only; delete is author or ADMIN/OWNER.
-- Index `(project_id, task_id, created_at)`.
+- Replies are one level deep: the parent must be a top-level comment in the same project (404 if missing, 422 if it's a reply). A reply takes its parent's `task_id`; an explicit different `taskId` → 422.
+- `@@unique([id, project_id])` is the target for the reply composite FK.
+- Indexes: `(project_id, task_id, created_at)`, `(parent_id, created_at)`.
 
 ### attachments
 
-- `storage_key` is a random UUID-based path; the user's filename is stored only as `original_name` and sent back in `Content-Disposition` on download.
-- Max 10 MB, MIME allowlist (images, PDF, plain text, CSV, common Office types, zip).
-- Same cascade and composite-FK rules as comments.
+- `storage_key` is `<project_id>/<uuid>`, generated server-side; no part of the user's filename reaches the path, and `LocalStorage` refuses any key that resolves outside `UPLOAD_DIR`. The filename is stored only as `original_name` (basename only, control characters stripped, max 255 chars, `file` if nothing is left) and sent back in `Content-Disposition` on download.
+- Max `MAX_UPLOAD_MB` (10 MB), one file per request, MIME allowlist: PNG, JPEG, GIF, WebP, PDF, plain text, CSV, zip, Word (`.doc`, `.docx`), Excel (`.xls`, `.xlsx`).
+- **Known limitation:** the MIME type is the one the client declares in the multipart part. There's no magic-byte sniffing, so a renamed executable labelled `text/plain` is accepted. Downloads are always `Content-Disposition: attachment` and helmet sends `X-Content-Type-Options: nosniff`, so browsers save rather than render them.
+- Upload order: task check (404 before anything is written) → write the file → insert the row; if the insert fails the file is deleted, so failed uploads leave no orphans.
+- Same cascade and composite-FK rules as comments. Deleting an attachment, task or project deletes the rows first, then the files after the transaction commits; a failed file delete is logged as a warning and doesn't fail the request. Task and project deletes lock the parent row before collecting storage keys, so an upload racing the delete fails its FK check instead of leaving an untracked file.
 
 ### notifications
 
@@ -244,6 +256,7 @@ Non-members get **404** on any project resource, so project existence is not lea
 | Update project name/description                     |         ❌          |   ✅   |         ✅          |
 | Delete project                                      |         ❌          |   ❌   |         ✅          |
 | Invite / revoke invitations                         |         ❌          |   ✅   |         ✅          |
+| Invite with role ADMIN                              |         ❌          |   ❌   |         ✅          |
 | Remove a MEMBER                                     |         ❌          |   ✅   |         ✅          |
 | Remove an ADMIN, change roles, transfer ownership   |         ❌          |   ❌   |         ✅          |
 | Leave project                                       |         ✅          |   ✅   | ❌ (transfer first) |
@@ -278,11 +291,20 @@ Flows:
 
 Rate limit `/auth/*` (e.g. 10 requests/min/IP).
 
+**Decisions and known trade-offs**
+
+- **Login accepts any non-empty password** (1–128 chars). The 8–128 policy is enforced only at register and change-password, so a short password at login is just wrong (401 `INVALID_CREDENTIALS`), not a validation error, and tightening the policy later doesn't lock out existing accounts.
+- **Refresh checks expiry before revocation.** A token that is both expired and revoked gets a plain 401 `INVALID_REFRESH_TOKEN` without triggering reuse detection.
+- **Retried refreshes look like reuse.** If a client retries a refresh after the first request already succeeded (e.g. the response was lost), the retry presents a revoked token, so reuse detection revokes all of the user's sessions and they must log in again. Two refreshes that race before either commits are safe: the `revokedAt: null` guard lets exactly one rotate and the other gets 401 without the revoke-all. Clients should serialise refreshes and never retry one with the same token. A short grace window for the just-rotated token is the upgrade path.
+- **Wrong current password on change-password is 400 `INVALID_CURRENT_PASSWORD`**, not 401, so clients don't mistake it for an expired session and start a token refresh.
+
 ---
 
 ## 7. API
 
-Base path `/api/v1`. All routes except register, login, refresh, and health require a bearer token. All IDs are UUIDs, validated before hitting the DB (invalid → 422).
+Base path `/api/v1`. All routes except register, login, refresh, logout, and health require a bearer token. All IDs are UUIDs, validated before hitting the DB (invalid → 422).
+
+**Interactive docs:** `GET /docs` serves Swagger UI and `GET /openapi.json` the raw OpenAPI 3.1 document (both outside `/api/v1`, no auth). The document is built in `src/docs/openapi.ts`: request bodies and query params are converted from the routes' own Zod schemas with `z.toJSONSchema()`, response shapes and error responses are declared as shared components, and a test checks that every registered route is documented and every documented operation exists.
 
 ### Auth
 
@@ -296,13 +318,13 @@ Base path `/api/v1`. All routes except register, login, refresh, and health requ
 
 ### Current user
 
-| Method | Path                    | Notes                                                                       |
-| ------ | ----------------------- | --------------------------------------------------------------------------- |
-| GET    | `/users/me`             | Profile                                                                     |
-| PATCH  | `/users/me`             | `{ name?, bio?, avatarUrl? }` (email change out of scope)                   |
-| PATCH  | `/users/me/password`    | `{ currentPassword, newPassword }` → 204                                    |
-| GET    | `/users/me/tasks`       | Tasks assigned to me across all my projects; same query params as task list |
-| GET    | `/users/me/invitations` | My pending, unexpired invitations                                           |
+| Method | Path                    | Notes                                                                                             |
+| ------ | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| GET    | `/users/me`             | Profile                                                                                           |
+| PATCH  | `/users/me`             | `{ name?, bio?, avatarUrl? }` (email change out of scope)                                         |
+| PATCH  | `/users/me/password`    | `{ currentPassword, newPassword }` → 204; wrong current password → 400 `INVALID_CURRENT_PASSWORD` |
+| GET    | `/users/me/tasks`       | Tasks assigned to me across all my projects; same query params as task list                       |
+| GET    | `/users/me/invitations` | My pending, unexpired invitations                                                                 |
 
 ### Projects
 
@@ -316,74 +338,85 @@ Base path `/api/v1`. All routes except register, login, refresh, and health requ
 
 ### Members and invitations
 
-| Method | Path                                             | Role                                   |
-| ------ | ------------------------------------------------ | -------------------------------------- |
-| GET    | `/projects/:projectId/members`                   | member                                 |
-| PATCH  | `/projects/:projectId/members/:userId`           | OWNER (`{ role }`; `OWNER` = transfer) |
-| DELETE | `/projects/:projectId/members/:userId`           | ADMIN+ to remove; self to leave        |
-| POST   | `/projects/:projectId/invitations`               | ADMIN+ (`{ email, role }`)             |
-| GET    | `/projects/:projectId/invitations`               | ADMIN+ (`?status=`)                    |
-| DELETE | `/projects/:projectId/invitations/:invitationId` | ADMIN+ (sets REVOKED)                  |
-| POST   | `/invitations/:invitationId/accept`              | invitee (email must match)             |
-| POST   | `/invitations/:invitationId/decline`             | invitee                                |
+| Method | Path                                             | Role                                                   |
+| ------ | ------------------------------------------------ | ------------------------------------------------------ |
+| GET    | `/projects/:projectId/members`                   | member                                                 |
+| PATCH  | `/projects/:projectId/members/:userId`           | OWNER (`{ role }`; `OWNER` = transfer; own role → 409) |
+| DELETE | `/projects/:projectId/members/:userId`           | ADMIN+ to remove; self to leave                        |
+| POST   | `/projects/:projectId/invitations`               | ADMIN+ (`{ email, role }`; role ADMIN: OWNER only)     |
+| GET    | `/projects/:projectId/invitations`               | ADMIN+ (`?status=`)                                    |
+| DELETE | `/projects/:projectId/invitations/:invitationId` | ADMIN+ (sets REVOKED)                                  |
+| POST   | `/invitations/:invitationId/accept`              | invitee (email must match)                             |
+| POST   | `/invitations/:invitationId/decline`             | invitee                                                |
 
 ### Tasks
 
-| Method | Path                                 | Notes                                                                                                                                  |
-| ------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/projects/:projectId/tasks`         | `{ title, description?, dueDate?, priority?, assigneeId? }`                                                                            |
-| GET    | `/projects/:projectId/tasks`         | filter/sort/search/paginate (below)                                                                                                    |
-| GET    | `/projects/:projectId/tasks/:taskId` | includes assignee and creator summaries, comment and attachment counts                                                                 |
-| PATCH  | `/projects/:projectId/tasks/:taskId` | any of `title, description, dueDate, priority, status, assigneeId` (`null` unassigns). Completing a task = `{ "status": "COMPLETED" }` |
-| DELETE | `/projects/:projectId/tasks/:taskId` | 204                                                                                                                                    |
+| Method | Path                                 | Notes                                                                                                                                                       |
+| ------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/tasks`         | `{ title, description?, dueDate?, priority?, assigneeId? }`; no `status` (starts OPEN), `priority` defaults to MEDIUM, `dueDate` is ISO 8601 with an offset |
+| GET    | `/projects/:projectId/tasks`         | filter/sort/search/paginate (below)                                                                                                                         |
+| GET    | `/projects/:projectId/tasks/:taskId` | includes assignee and creator summaries, comment and attachment counts                                                                                      |
+| PATCH  | `/projects/:projectId/tasks/:taskId` | any of `title, description, dueDate, priority, status, assigneeId` (`null` unassigns). Completing a task = `{ "status": "COMPLETED" }`                      |
+| DELETE | `/projects/:projectId/tasks/:taskId` | 204                                                                                                                                                         |
+
+- `assigneeId` (create or update) must be a current member of this project, else **422** `VALIDATION_ERROR` with `details[].path = "assigneeId"`.
+- PATCH and DELETE check, in order: membership (404) → task belongs to this project (404) → permission (403) → body (422). The task is loaded and authorised before the body is validated, so a forbidden caller never learns about body rules.
+- Completion: entering COMPLETED sets `completed_at = now()`, leaving it clears it, and a PATCH that keeps it COMPLETED keeps the original timestamp. A PATCH that sends `status` only applies if the status hasn't changed since it was read, otherwise **409**, so status and `completed_at` can't disagree under concurrent edits.
 
 **Task list query params**
 
-| Param                   | Example                        | Meaning                                                             |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------------- |
-| `status`                | `OPEN,IN_PROGRESS`             | comma list                                                          |
-| `priority`              | `HIGH,URGENT`                  | comma list                                                          |
-| `assignee`              | `me` / `unassigned` / `<uuid>` |                                                                     |
-| `createdBy`             | `me` / `<uuid>`                |                                                                     |
-| `dueBefore`, `dueAfter` | ISO 8601                       |                                                                     |
-| `overdue`               | `true`                         | `due_date < now()` and not completed                                |
-| `q`                     | `login bug`                    | case-insensitive substring match on title or description            |
-| `sort`                  | `dueDate`                      | one of `dueDate, createdAt, updatedAt, priority, title` (whitelist) |
-| `order`                 | `asc` / `desc`                 | default `desc` for timestamps; due dates always sort nulls last     |
-| `page`, `limit`         | `1`, `20`                      | limit max 100                                                       |
+| Param                   | Example                        | Meaning                                                                                                                                                                                                 |
+| ----------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                | `OPEN,IN_PROGRESS`             | comma list                                                                                                                                                                                              |
+| `priority`              | `HIGH,URGENT`                  | comma list                                                                                                                                                                                              |
+| `assignee`              | `me` / `unassigned` / `<uuid>` | not accepted on `/users/me/tasks` (422)                                                                                                                                                                 |
+| `createdBy`             | `me` / `<uuid>`                |                                                                                                                                                                                                         |
+| `dueBefore`, `dueAfter` | ISO 8601 with offset           | exclusive: `due_date <` / `>` the value                                                                                                                                                                 |
+| `overdue`               | `true` / `false`               | `true`: `due_date < now()` and not completed; `false`: the complement (undated, not yet due, or completed). Any other value → 422                                                                       |
+| `q`                     | `login bug`                    | case-insensitive substring match on title or description                                                                                                                                                |
+| `sort`                  | `dueDate`                      | one of `dueDate, createdAt, updatedAt, priority, title` (whitelist)                                                                                                                                     |
+| `order`                 | `asc` / `desc`                 | default per field: `dueDate` asc, `createdAt` desc, `updatedAt` desc, `priority` desc (URGENT first), `title` asc. Default sort is `createdAt` desc. Due dates always sort nulls last; `id` breaks ties |
+| `page`, `limit`         | `1`, `20`                      | limit max 100                                                                                                                                                                                           |
+
+Unknown params and invalid values → 422. `GET /users/me/tasks` takes the same params except `assignee`; its items also include `project { id, name }`. List items carry `assignee { id, name } | null` and `createdBy { id, name }`.
 
 ### Comments
 
-| Method | Path                                       | Notes                                                                                         |
-| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| POST   | `/projects/:projectId/comments`            | `{ body, taskId? }`                                                                           |
-| GET    | `/projects/:projectId/comments`            | `?taskId=<uuid>` for one task, `?taskId=none` for project-level only; oldest first; paginated |
-| PATCH  | `/projects/:projectId/comments/:commentId` | author only                                                                                   |
-| DELETE | `/projects/:projectId/comments/:commentId` | author or ADMIN+                                                                              |
+| Method | Path                                               | Notes                                                                                                                                                                                                                                                                                   |
+| ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/comments`                    | any member; `{ body, taskId?, parentId? }`; `body` trimmed, 1–5000; `taskId` not in this project → 404; `parentId` rules in §4                                                                                                                                                          |
+| GET    | `/projects/:projectId/comments`                    | any member sees all comments; `?taskId=<uuid>` for one task (404 if not in this project), `?taskId=none` for project-level only; `?parentId=none` for top-level only, `?parentId=<id>` for that comment's replies; oldest first (`?order=desc` for newest; `id` breaks ties); paginated |
+| GET    | `/projects/:projectId/comments/:commentId/replies` | any member; that top-level comment's replies, oldest first (`?order=desc` for newest), paginated; missing or another project's → 404; a reply's id → 422; params other than `page`, `limit`, `order` → 422                                                                              |
+| GET    | `/projects/:projectId/comments/:commentId`         | any member; the comment plus `task { id, title, description } \| null` and `project { id, name }`                                                                                                                                                                                       |
+| PATCH  | `/projects/:projectId/comments/:commentId`         | author only (ADMIN/OWNER can't edit others'); `{ body }`; sets `editedAt`                                                                                                                                                                                                               |
+| DELETE | `/projects/:projectId/comments/:commentId`         | author or ADMIN+; deleting a top-level comment deletes its replies                                                                                                                                                                                                                      |
+
+POST, PATCH, detail and list items return the comment fields (`id, projectId, taskId, parentId, authorId, body, editedAt, createdAt`) plus `author { id, name }` and `replyCount` (direct replies; always 0 for a reply). List query params other than `taskId`, `parentId`, `order`, `page`, `limit` → 422. A comment from another project → 404. PATCH and DELETE check, in order: comment exists in this project (404) → permission (403) → body (422).
 
 ### Attachments
 
-| Method | Path                                                      | Notes                                            |
-| ------ | --------------------------------------------------------- | ------------------------------------------------ |
-| POST   | `/projects/:projectId/attachments`                        | `multipart/form-data`: `file`, optional `taskId` |
-| GET    | `/projects/:projectId/attachments`                        | `?taskId=` as above; metadata only               |
-| GET    | `/projects/:projectId/attachments/:attachmentId/download` | streams file, `Content-Disposition: attachment`  |
-| DELETE | `/projects/:projectId/attachments/:attachmentId`          | uploader or ADMIN+                               |
+| Method | Path                                                      | Notes                                                                                                                                                                                                |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/attachments`                        | any member; `multipart/form-data`: `file` (exactly one), optional `taskId` (404 if not in this project); 201 `{ id, originalName, mimeType, sizeBytes, taskId, createdAt, uploadedBy { id, name } }` |
+| GET    | `/projects/:projectId/attachments`                        | any member; `?taskId=<uuid>` / `none` as for comments (404 if not in this project); unknown params → 422; newest first (`id` breaks ties); paginated; metadata only                                  |
+| GET    | `/projects/:projectId/attachments/:attachmentId`          | any member; metadata (same shape as POST)                                                                                                                                                            |
+| GET    | `/projects/:projectId/attachments/:attachmentId/download` | any member; streams the file with the stored `Content-Type`, `Content-Length` and `Content-Disposition: attachment` (UTF-8 names encoded as `filename*`); file missing from storage → 404            |
+| DELETE | `/projects/:projectId/attachments/:attachmentId`          | uploader or ADMIN+ (else 403); row, then file; 204                                                                                                                                                   |
 
 ### Notifications (optional)
 
-| Method | Path                                  | Notes                                   |
-| ------ | ------------------------------------- | --------------------------------------- |
-| GET    | `/notifications`                      | `?unread=true`, paginated, newest first |
-| GET    | `/notifications/stream`               | SSE stream                              |
-| PATCH  | `/notifications/:notificationId/read` | 204                                     |
-| POST   | `/notifications/read-all`             | 204                                     |
+| Method | Path                                  | Notes                                                              |
+| ------ | ------------------------------------- | ------------------------------------------------------------------ |
+| GET    | `/notifications`                      | `?unread=true\|false`, paginated, newest first; `meta.unreadCount` |
+| GET    | `/notifications/stream`               | SSE stream                                                         |
+| PATCH  | `/notifications/:notificationId/read` | 204, idempotent; not mine → 404                                    |
+| POST   | `/notifications/read-all`             | 204                                                                |
 
 ### AI (optional)
 
-| Method | Path                   | Notes                                                                                    |
-| ------ | ---------------------- | ---------------------------------------------------------------------------------------- |
-| POST   | `/ai/task-description` | `{ title, notes? }` → `{ description }`. 503 `AI_DISABLED` when no API key is configured |
+| Method | Path                   | Notes                                                                                                                                                                                                                      |
+| ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/ai/task-description` | any signed-in user; strict `{ title (trim, 1–200), notes? (trim, ≤ 2000) }` → `{ description }`; 10/min per user; 503 `AI_DISABLED` when no provider is configured; 502 `AI_UPSTREAM_ERROR` on provider failure or timeout |
 
 ### Health
 
@@ -413,19 +446,23 @@ Error:
 }
 ```
 
-| HTTP | `code`                                                   | When                                                                |
-| ---- | -------------------------------------------------------- | ------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart                                   |
-| 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                    |
-| 403  | `FORBIDDEN`                                              | Member lacks role or row ownership                                  |
-| 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                            |
-| 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving |
-| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over limit                                                   |
-| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | MIME not allowed                                                    |
-| 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                               |
-| 429  | `RATE_LIMITED`                                           | Rate limit hit                                                      |
-| 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)       |
-| 503  | `AI_DISABLED`                                            | AI endpoint without a key                                           |
+| HTTP | `code`                                                   | When                                                                                                                 |
+| ---- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST`                                            | Malformed JSON, invalid multipart (incl. a second file or a file field other than `file`)                            |
+| 400  | `INVALID_CURRENT_PASSWORD`                               | Change-password with a wrong current password                                                                        |
+| 401  | `UNAUTHORIZED` / `INVALID_CREDENTIALS` / `TOKEN_EXPIRED` | Missing/invalid token, bad login                                                                                     |
+| 401  | `INVALID_REFRESH_TOKEN`                                  | Refresh token unknown, expired, revoked or reused                                                                    |
+| 403  | `FORBIDDEN`                                              | Member lacks role or row ownership                                                                                   |
+| 404  | `NOT_FOUND`                                              | Missing resource, or caller not a member                                                                             |
+| 409  | `CONFLICT`                                               | Email taken, already a member, pending invite exists, owner leaving, changing own role, invitation no longer pending |
+| 410  | `INVITATION_EXPIRED`                                     | Accepting or declining an invitation past `expires_at`                                                               |
+| 413  | `PAYLOAD_TOO_LARGE`                                      | Upload over `MAX_UPLOAD_MB`, or JSON body over 1 MB                                                                  |
+| 415  | `UNSUPPORTED_MEDIA_TYPE`                                 | Declared MIME type not in the allowlist                                                                              |
+| 422  | `VALIDATION_ERROR`                                       | Zod failure on body, params, or query                                                                                |
+| 429  | `RATE_LIMITED`                                           | Rate limit hit                                                                                                       |
+| 500  | `INTERNAL_ERROR`                                         | Anything unexpected (log full error; never send stack traces)                                                        |
+| 502  | `AI_UPSTREAM_ERROR`                                      | AI provider error, empty answer or 10 s timeout (details logged, never returned)                                     |
+| 503  | `AI_DISABLED`                                            | AI endpoint with no provider configured (`AI_PROVIDER` empty)                                                        |
 
 Implementation: an `AppError` base class with subclasses (`NotFoundError`, `ForbiddenError`, `ConflictError`, …). The error middleware maps `AppError`, `ZodError`, multer errors, and Prisma `P2002` (unique violation → 409) / `P2025` (not found → 404); everything else is 500.
 
@@ -435,12 +472,30 @@ Implementation: an `AppError` base class with subclasses (`NotFoundError`, `Forb
 
 ## 9. Notifications (optional)
 
-1. Services emit domain events on an in-process `EventEmitter` **after the transaction commits**: `task.assigned`, `task.updated`, `task.completed`, `comment.created`, `invitation.created`.
-2. A notifications listener decides recipients (assignee, task creator; never the actor), inserts `notifications` rows, then pushes each to any open SSE connections for that user.
-3. SSE registry: `Map<userId, Set<Response>>`. Send a `: ping` comment every 25 s to keep proxies from closing idle connections. Remove the response on `close`.
-4. Missed events while offline are available from `GET /notifications`.
+1. Services publish domain events on a typed in-process bus (`src/lib/events.ts`) **after their write has committed**, never inside `$transaction`: `task.assigned`, `task.updated`, `task.completed`, `comment.created`, `invitation.created`.
+2. `publish()` **awaits** every handler in turn, each in its own try/catch: a failing handler is logged and never reaches the caller, so a notification problem can't fail or roll back a request. The cost is that notification work adds to the request's latency; a queue (or not awaiting) is the upgrade path if that matters.
+3. **One event per task change**, most specific first: task created with an assignee, or PATCH sets `assigneeId` to a different, non-null user → `task.assigned`; else PATCH moves `status` to COMPLETED → `task.completed`; else any field whose value actually changed → `task.updated` with `changedFields`. Unassigning (`assigneeId: null`) counts as an update; a PATCH whose values are all unchanged publishes nothing.
+4. The notifications listener decides recipients, **never the actor**, de-duplicated:
 
-Limitation to document: the registry is in memory, so this works for a single instance. Scaling out needs Redis pub/sub between instances.
+   | Event                       | Recipients                                 | Type                 |
+   | --------------------------- | ------------------------------------------ | -------------------- |
+   | `task.assigned`             | the assignee                               | `TASK_ASSIGNED`      |
+   | `task.completed`            | task creator, assignee                     | `TASK_COMPLETED`     |
+   | `task.updated`              | task creator, assignee                     | `TASK_UPDATED`       |
+   | `comment.created` (task)    | task creator, assignee                     | `COMMENT_ADDED`      |
+   | `comment.created` (reply)   | the parent comment's author                | `COMMENT_REPLY`      |
+   | `comment.created` (project) | nobody, unless it's a reply                | —                    |
+   | `invitation.created`        | the account with that email, if one exists | `PROJECT_INVITATION` |
+
+   A reply on a task also sends `COMMENT_ADDED` to the task's creator and assignee, except the parent's author, who gets only the `COMMENT_REPLY`. If the parent is gone by the time the event is handled, no `COMMENT_REPLY` is sent.
+
+   It inserts the rows, then pushes each to the recipient's open SSE streams. The `payload` is a snapshot taken at event time, so later renames don't rewrite history: `actor { id, name }`, `project { id, name }`, `task { id, title }` for task events, plus `changedFields`, `commentId` + `commentPreview` (first 140 characters; replies add `parentId`), or `invitationId` + `role`. A reply on a task comment includes `task { id, title }`; a reply on a project-level comment has no `task`.
+
+5. Registration is idempotent (`createApp()` calls it; tests build many apps).
+6. SSE: `GET /notifications/stream` sends `text/event-stream` with `Cache-Control: no-cache`, `X-Accel-Buffering: no`, an initial `event: ready`, then `id: <notificationId>` / `event: notification` / `data: <json>` frames, and a `: ping` comment every 25 s to keep proxies from closing idle connections. Registry: `Map<userId, Set<Response>>`; a response is removed (and its timer cleared) on `close`. On shutdown, `closeAllStreams()` ends every stream before `server.close()` so they don't block a graceful exit.
+7. Missed events while offline are available from `GET /notifications` (`?unread=true|false`; `meta` adds `unreadCount`). Marking one read is idempotent and keeps the first `read_at`; someone else's notification is 404.
+
+**Limitation:** the SSE registry and the event bus are in memory, so live pushes reach only clients connected to the same instance as the request that caused them. Scaling out needs Redis pub/sub (or similar) between instances; the stored notifications are unaffected.
 
 SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this API, clients use a fetch-based SSE reader (or curl) with the header. Mention a short-lived `?token=` ticket as the browser-friendly alternative in the README.
 
@@ -448,11 +503,14 @@ SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this
 
 ## 10. AI task description (optional)
 
-- `AiProvider` interface: `generateTaskDescription({ title, notes }): Promise<string>`. One real implementation (any provider via its SDK, key from env) and a `FakeAiProvider` for tests.
-- Prompt asks for a concise description with a short goal statement and a checklist of acceptance criteria, plain text, max ~150 words.
-- 10 s timeout; provider errors map to 502 `AI_UPSTREAM_ERROR`.
-- Rate limit per user (e.g. 10/min).
-- The endpoint only suggests text; the client still creates the task through the normal endpoint.
+- `AiProvider` interface: `generateTaskDescription({ title, notes? }): Promise<string>`. **Two real implementations**, chosen by `AI_PROVIDER`, so output quality and cost can be compared by changing config only: `anthropic` (official `@anthropic-ai/sdk`) and `gemini` (official `@google/genai`). Both take the model from `AI_MODEL`; no model id is hardcoded. A `FakeAiProvider` returns a deterministic description built from the input for tests.
+- Config: if `AI_PROVIDER` is set, `AI_API_KEY` and `AI_MODEL` are required (the app refuses to boot otherwise); empty `AI_PROVIDER` disables the feature (503 `AI_DISABLED`).
+- Registry: `getAiProvider()` builds the configured provider lazily (or returns null); `setAiProvider()` overrides it in tests. Under `NODE_ENV=test` the configured provider is always null, so tests can't reach a real API even if `.env` holds a key.
+- Prompt (shared by both providers): the system instruction asks for plain text, one goal sentence, then 3–6 acceptance criteria as `- ` bullets, about 150 words, no headings or preamble. Title and notes go in the user turn inside `<title>` / `<notes>` tags, and the model is told to treat that content as data, never instructions. Any `<title>`/`<notes>` tags inside the user's text (including spaced variants like `< /notes >`) are stripped so the data can't close its block early.
+- Output is trimmed and capped at 5000 characters (the task description limit); an empty answer is a 502.
+- 10 s budget per call: the Anthropic client uses a 10 s timeout with retries off (the SDK otherwise retries, multiplying the wait); Gemini uses a 10 s HTTP timeout plus an abort signal. A Claude `refusal` stop reason, an empty Gemini answer, a timeout or any SDK error map to 502 `AI_UPSTREAM_ERROR`; the underlying error is logged with the provider name and never returned.
+- Rate limit: 10 requests/min **per user** (keyed by the authenticated user id, not the IP), via `createRateLimiter({ keyGenerator: byUserId })`; skipped under `NODE_ENV=test` like the auth limiter.
+- The endpoint only suggests text; the client still creates or updates the task through the normal endpoints.
 
 ---
 
@@ -464,7 +522,7 @@ SSE auth: browsers' `EventSource` can't send an `Authorization` header. For this
 - [ ] Rate limits on auth and AI routes
 - [ ] Non-members get 404
 - [ ] `password_hash` excluded by explicit selects
-- [ ] Upload size limit, MIME allowlist, random storage keys, `Content-Disposition: attachment` on download
+- [ ] Upload size limit, MIME allowlist, random storage keys, `Content-Disposition: attachment` on download (MIME is client-declared, not sniffed; storage refuses keys outside `UPLOAD_DIR`)
 - [ ] Env validated at boot with Zod; app refuses to start on missing secrets
 - [ ] No stack traces in responses
 - [ ] `.env` gitignored, `.env.example` committed
@@ -534,8 +592,8 @@ taskmaster/
   - Auth: register duplicate → 409; login wrong password → 401; refresh rotation; reused refresh token revokes all; logout then refresh → 401.
   - Permissions: non-member → 404; MEMBER deleting someone else's task → 403; ADMIN removing ADMIN → 403; owner leaving → 409.
   - Tasks: assign to non-member → 422/409; complete sets `completed_at`; reopen clears it; each filter, sort, `q`, pagination meta; `/users/me/tasks` spans projects.
-  - Invitations: duplicate pending → 409; accept adds membership; wrong user accepting → 404; expired → 410 or 409 (pick one, document it).
-  - Comments/attachments: `taskId` from another project → 404; oversize upload → 413; bad MIME → 415.
+  - Invitations: duplicate pending → 409; accept adds membership; wrong user accepting → 404; expired → 410 `INVITATION_EXPIRED`.
+  - Comments/attachments: `taskId` from another project → 404; reply to a reply → 422; oversize upload → 413; bad MIME → 415.
   - Member removal unassigns their tasks.
 - **CI:** GitHub Actions with a `postgres:18.3` service container → install → `prisma migrate deploy` → lint → typecheck → test.
 
@@ -655,6 +713,7 @@ enum NotificationType {
   TASK_COMPLETED
   COMMENT_ADDED
   PROJECT_INVITATION
+  COMMENT_REPLY
 }
 
 model User {
@@ -780,16 +839,23 @@ model Comment {
   projectId String    @map("project_id") @db.Uuid
   taskId    String?   @map("task_id") @db.Uuid
   authorId  String    @map("author_id") @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
   body      String
   editedAt  DateTime? @map("edited_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // Composite FK: a task-level comment must point at a task in the same project.
-  task    Task?   @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Cascade)
-  author  User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  task    Task?     @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  // Composite FK: a reply's parent must be in the same project. One-level nesting and
+  // matching taskId are enforced in the service.
+  parent  Comment?  @relation("CommentReplies", fields: [parentId, projectId], references: [id, projectId], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
 
+  @@unique([id, projectId])
   @@index([projectId, taskId, createdAt])
+  @@index([parentId, createdAt])
   @@map("comments")
 }
 
@@ -880,6 +946,7 @@ INVITATION_TTL_DAYS=7
 CORS_ORIGIN=http://localhost:5173
 UPLOAD_DIR=./uploads
 MAX_UPLOAD_MB=10
-AI_PROVIDER=
+AI_PROVIDER=          # anthropic | gemini; empty disables AI
 AI_API_KEY=
+AI_MODEL=             # required when AI_PROVIDER is set
 ```

@@ -1,14 +1,44 @@
 // Request augmentations live here. pino-http already adds `req.id` and `req.log`.
-// Later steps extend Express.Request, for example:
-//
-// declare global {
-//   namespace Express {
-//     interface Request {
-//       user?: { id: string };                                          // set by authenticate
-//       membership?: { role: ProjectRole };                             // set by loadMembership
-//       validated?: { body?: unknown; params?: unknown; query?: unknown }; // set by validate()
-//     }
-//   }
-// }
+import type { ProjectRole, TaskPriority, TaskStatus } from '@prisma/client';
+
+declare global {
+    namespace Express {
+        interface Request {
+            /** Set by `authenticate` once the bearer token is verified. */
+            user?: { id: string };
+            /** Set by `loadMembership` on project routes. Read it with `currentMembership()`. */
+            membership?: { projectId: string; userId: string; role: ProjectRole };
+            /** Set by the tasks module's `loadTask()` once the caller may act on the task. */
+            task?: {
+                id: string;
+                createdById: string;
+                assigneeId: string | null;
+                status: TaskStatus;
+                // The editable fields as they were, so an update can tell what actually changed.
+                title: string;
+                description: string | null;
+                priority: TaskPriority;
+                dueDate: Date | null;
+            };
+            /** Set by the comments module's `loadComment()` once the caller may act on the comment. */
+            comment?: {
+                id: string;
+                projectId: string;
+                taskId: string | null;
+                authorId: string;
+                parentId: string | null;
+            };
+            /** Set by the attachments module's `loadAttachment()` once the caller may act on it. */
+            attachment?: {
+                id: string;
+                projectId: string;
+                uploadedById: string;
+                storageKey: string;
+            };
+            /** Set by `validate()`. Read it with `getValidated()` rather than directly. */
+            validated?: { body?: unknown; params?: unknown; query?: unknown };
+        }
+    }
+}
 
 export {};
