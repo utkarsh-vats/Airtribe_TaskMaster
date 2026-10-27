@@ -6,6 +6,7 @@ import {
     commentIdParamSchema,
     createCommentBodySchema,
     listCommentsQuerySchema,
+    listRepliesQuerySchema,
     updateCommentBodySchema,
 } from './comments.schemas';
 import { currentComment } from './comments.middleware';
@@ -79,7 +80,7 @@ export async function deleteComment(req: Request, res: Response): Promise<void> 
 export async function listReplies(req: Request, res: Response): Promise<void> {
     const { projectId } = currentMembership(req);
     const { commentId } = getValidated(req, 'params', commentIdParamSchema);
-    const query = getValidated(req, 'query', listCommentsQuerySchema);
+    const query = getValidated(req, 'query', listRepliesQuerySchema);
     const { data, meta } = await commentService.listReplies(projectId, commentId, query);
     paginated(res, data, meta);
 }

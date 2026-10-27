@@ -87,16 +87,44 @@ export function registerNotificationListeners(): void {
     );
 
     subscribe('comment.created', async (e) => {
-        // Project-level comments notify nobody: there's no task audience.
-        if (e.taskId === null) return;
         const comment = await notificationsRepository.findCommentBody(e.commentId);
         const preview = Array.from(comment?.body ?? '')
             .slice(0, PREVIEW_LENGTH)
             .join('');
+
+        // If the comment is a reply, notify the parent comment's author
+        let replyRecipient: string | null = null;
+        if (e.parentId !== null) {
+            const parent = await notificationsRepository.findCommentAuthor(e.projectId, e.parentId);
+            if (parent && parent.authorId !== e.actorId) {
+                replyRecipient = parent.authorId;
+                const task = e.taskId
+                    ? await notificationsRepository.findTaskPeople(e.taskId)
+                    : null;
+                await notify(
+                    [replyRecipient],
+                    'COMMENT_REPLY',
+                    {
+                        projectId: e.projectId,
+                        taskId: e.taskId,
+                        actorId: e.actorId,
+                        extra: {
+                            commentId: e.commentId,
+                            parentId: e.parentId,
+                            commentPreview: preview,
+                        },
+                    },
+                    task ?? undefined,
+                );
+            }
+        }
+
+        // Project-level comments notify nobody: there's no task audience.
+        if (e.taskId === null) return;
         await notifyAboutTask(
             { projectId: e.projectId, taskId: e.taskId, actorId: e.actorId },
             'COMMENT_ADDED',
-            (t) => [t.createdById, t.assigneeId],
+            (t) => [t.createdById, t.assigneeId].filter((id) => id !== replyRecipient),
             { commentId: e.commentId, commentPreview: preview },
         );
     });

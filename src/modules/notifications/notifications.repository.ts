@@ -91,6 +91,13 @@ export function findCommentBody(id: string) {
     return prisma.comment.findUnique({ where: { id }, select: { body: true } });
 }
 
+export function findCommentAuthor(projectId: string, commentId: string) {
+    return prisma.comment.findUnique({
+        where: { id: commentId, projectId: projectId },
+        select: { authorId: true },
+    });
+}
+
 export function findInvitationRole(id: string) {
     return prisma.projectInvitation.findUnique({ where: { id }, select: { role: true } });
 }

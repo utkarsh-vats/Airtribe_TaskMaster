@@ -15,6 +15,7 @@ import { resetDb } from '../helpers/db';
 import {
     addMember,
     authHeader,
+    createComment,
     createProject,
     createTask,
     createUser,
@@ -232,6 +233,175 @@ describe('comment notifications', () => {
             .expect(201);
 
         expect(await prisma.notification.count()).toBe(0);
+    });
+});
+
+describe('comment reply notifications', () => {
+    /** Posts a reply to `parentId` as `user`; returns the created reply's id. */
+    async function reply(
+        project: Project,
+        user: TestUser,
+        parentId: string,
+        body = 'A reply',
+    ): Promise<string> {
+        const res = await request(app)
+            .post(`/api/v1/projects/${project.id}/comments`)
+            .set('Authorization', await authHeader(app, user))
+            .send({ body, parentId })
+            .expect(201);
+        return res.body.data.id as string;
+    }
+
+    it("a reply to someone's project-level comment notifies only its author", async () => {
+        const { project, owner, admin, member } = await team();
+        const parent = await createComment(project.id, member.id);
+        const body = 'y'.repeat(150);
+
+        const replyId = await reply(project, admin, parent.id, body);
+
+        expect(await typesFor(member.id)).toEqual(['COMMENT_REPLY']);
+        expect(await typesFor(admin.id)).toEqual([]);
+        expect(await typesFor(owner.id)).toEqual([]);
+        const row = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: member.id },
+        });
+        expect(row).toMatchObject({ projectId: project.id, taskId: null });
+        expect(row.payload).toEqual({
+            actor: { id: admin.id, name: 'Admin' },
+            project: { id: project.id, name: 'Apollo' },
+            commentId: replyId,
+            parentId: parent.id,
+            commentPreview: 'y'.repeat(140),
+        });
+    });
+
+    it('replying to your own comment creates no COMMENT_REPLY', async () => {
+        const { project, owner, member } = await team();
+        const projectLevel = await createComment(project.id, member.id);
+        const task = await createTask(project.id, owner.id);
+        const onTask = await createComment(project.id, member.id, { taskId: task.id });
+
+        await reply(project, member, projectLevel.id);
+        await reply(project, member, onTask.id);
+
+        expect(await prisma.notification.count({ where: { type: 'COMMENT_REPLY' } })).toBe(0);
+        expect(await typesFor(member.id)).toEqual([]);
+        // The task's creator still hears about the comment on their task.
+        expect(await typesFor(owner.id)).toEqual(['COMMENT_ADDED']);
+    });
+
+    it('the parent author who is also the assignee gets only COMMENT_REPLY', async () => {
+        const { project, owner, admin, member } = await team();
+        const task = await createTask(project.id, owner.id, { assigneeId: member.id });
+        const parent = await createComment(project.id, member.id, { taskId: task.id });
+
+        await reply(project, admin, parent.id);
+
+        expect(await typesFor(member.id)).toEqual(['COMMENT_REPLY']);
+        expect(await typesFor(owner.id)).toEqual(['COMMENT_ADDED']);
+        expect(await typesFor(admin.id)).toEqual([]);
+    });
+
+    it('the parent author who is also the creator gets only COMMENT_REPLY', async () => {
+        const { project, admin, member } = await team();
+        const task = await createTask(project.id, member.id);
+        const parent = await createComment(project.id, member.id, { taskId: task.id });
+
+        await reply(project, admin, parent.id);
+
+        expect(await typesFor(member.id)).toEqual(['COMMENT_REPLY']);
+        expect(await typesFor(admin.id)).toEqual([]);
+        expect(await prisma.notification.count()).toBe(1);
+    });
+
+    it('a reply on a task notifies the assignee with COMMENT_ADDED and the parent author with COMMENT_REPLY', async () => {
+        const { project, owner, admin, member } = await team();
+        const task = await createTask(project.id, owner.id, { assigneeId: member.id });
+        const parent = await createComment(project.id, admin.id, { taskId: task.id });
+
+        const replyId = await reply(project, owner, parent.id);
+
+        expect(await typesFor(member.id)).toEqual(['COMMENT_ADDED']);
+        expect(await typesFor(admin.id)).toEqual(['COMMENT_REPLY']);
+        expect(await typesFor(owner.id)).toEqual([]);
+        const replyRow = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: admin.id },
+        });
+        expect(replyRow.taskId).toBe(task.id);
+        expect(replyRow.payload).toMatchObject({ commentId: replyId, parentId: parent.id });
+    });
+
+    it('a top-level task comment still notifies creator and assignee with COMMENT_ADDED only', async () => {
+        const { project, owner, admin, member } = await team();
+        const task = await createTask(project.id, owner.id, { assigneeId: member.id });
+
+        await request(app)
+            .post(`/api/v1/projects/${project.id}/comments`)
+            .set('Authorization', await authHeader(app, admin))
+            .send({ body: 'Top level', taskId: task.id })
+            .expect(201);
+
+        expect(await typesFor(owner.id)).toEqual(['COMMENT_ADDED']);
+        expect(await typesFor(member.id)).toEqual(['COMMENT_ADDED']);
+        expect(await typesFor(admin.id)).toEqual([]);
+        expect(await prisma.notification.count({ where: { type: 'COMMENT_REPLY' } })).toBe(0);
+    });
+
+    it('a reply on a task comment carries the task summary in its payload', async () => {
+        const { project, owner, admin, member } = await team();
+        const task = await createTask(project.id, owner.id, { title: 'Ship it' });
+        const parent = await createComment(project.id, admin.id, { taskId: task.id });
+
+        const replyId = await reply(project, member, parent.id, 'On it');
+
+        const row = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: admin.id, type: 'COMMENT_REPLY' },
+        });
+        expect(row.payload).toEqual({
+            actor: { id: member.id, name: 'Member' },
+            project: { id: project.id, name: 'Apollo' },
+            task: { id: task.id, title: 'Ship it' },
+            commentId: replyId,
+            parentId: parent.id,
+            commentPreview: 'On it',
+        });
+    });
+
+    it('a reply on a project-level comment has no task key in its payload', async () => {
+        const { project, admin, member } = await team();
+        const parent = await createComment(project.id, admin.id);
+
+        await reply(project, member, parent.id);
+
+        const row = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: admin.id, type: 'COMMENT_REPLY' },
+        });
+        expect(row.payload).not.toHaveProperty('task');
+        expect(Object.keys(row.payload as object)).not.toContain('task');
+    });
+
+    it('COMMENT_ADDED and COMMENT_REPLY from the same reply carry the same task summary', async () => {
+        const { project, owner, admin, member } = await team();
+        const task = await createTask(project.id, owner.id, {
+            title: 'Ship it',
+            assigneeId: member.id,
+        });
+        const parent = await createComment(project.id, admin.id, { taskId: task.id });
+
+        await reply(project, owner, parent.id);
+
+        const replyRow = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: admin.id, type: 'COMMENT_REPLY' },
+        });
+        const addedRow = await prisma.notification.findFirstOrThrow({
+            where: { recipientId: member.id, type: 'COMMENT_ADDED' },
+        });
+        const summary = { id: task.id, title: 'Ship it' };
+        expect(replyRow.payload).toHaveProperty('task', summary);
+        expect(addedRow.payload).toHaveProperty('task', summary);
+        expect((addedRow.payload as { task: unknown }).task).toEqual(
+            (replyRow.payload as { task: unknown }).task,
+        );
     });
 });
 
