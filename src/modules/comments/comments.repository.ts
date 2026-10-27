@@ -16,6 +16,7 @@ const commentFields = {
 const commentSelect = {
     ...commentFields,
     author: { select: { id: true, name: true } },
+    _count: { select: { replies: true } },
 } satisfies Prisma.CommentSelect;
 
 /** GET /comments/:commentId: also the task and project summaries. */
@@ -25,8 +26,17 @@ const commentDetailSelect = {
     project: { select: { id: true, name: true } },
 } satisfies Prisma.CommentSelect;
 
-export type CommentRow = Prisma.CommentGetPayload<{ select: typeof commentSelect }>;
-export type CommentDetailRow = Prisma.CommentGetPayload<{ select: typeof commentDetailSelect }>;
+function withReplyCount<T extends { _count: { replies: number } }>({
+    _count,
+    ...rest
+}: T): Omit<T, '_count'> & { replyCount: number } {
+    return { ...rest, replyCount: _count.replies };
+}
+
+type CommentRecord = Prisma.CommentGetPayload<{ select: typeof commentSelect }>;
+type CommentDetailRecord = Prisma.CommentGetPayload<{ select: typeof commentDetailSelect }>;
+export type CommentRow = Omit<CommentRecord, '_count'> & { replyCount: number };
+export type CommentDetailRow = Omit<CommentDetailRecord, '_count'> & { replyCount: number };
 
 interface Page {
     where: Prisma.CommentWhereInput;
@@ -45,7 +55,7 @@ export async function listComments({
         prisma.comment.findMany({ where, orderBy, skip, take, select: commentSelect }),
         prisma.comment.count({ where }),
     ]);
-    return { rows, total };
+    return { rows: rows.map(withReplyCount), total };
 }
 
 export async function createComment(data: {
@@ -55,7 +65,7 @@ export async function createComment(data: {
     parentId?: string | null;
     body: string;
 }): Promise<CommentRow> {
-    return prisma.comment.create({ data, select: commentSelect });
+    return prisma.comment.create({ data, select: commentSelect }).then(withReplyCount);
 }
 export async function updateComment(
     projectId: string,
@@ -65,11 +75,13 @@ export async function updateComment(
         editedAt: Date;
     },
 ): Promise<CommentRow> {
-    return prisma.comment.update({
-        where: { id: commentId, projectId },
-        data,
-        select: commentSelect,
-    });
+    return prisma.comment
+        .update({
+            where: { id: commentId, projectId },
+            data,
+            select: commentSelect,
+        })
+        .then(withReplyCount);
 }
 export async function deleteComment({
     projectId,
@@ -102,8 +114,9 @@ export async function getCommentById({
     projectId: string;
     commentId: string;
 }): Promise<CommentDetailRow | null> {
-    return prisma.comment.findUnique({
+    const row = await prisma.comment.findUnique({
         where: { id: commentId, projectId },
         select: commentDetailSelect,
     });
+    return row ? withReplyCount(row) : null;
 }

@@ -7,7 +7,12 @@ import { hasRole } from '../../lib/roles';
 import * as tasksRepository from '../tasks/tasks.repository';
 import * as commentRepository from './comments.repository';
 import type { CommentDetailRow, CommentRow } from './comments.repository';
-import type { CreateCommentInput, ListCommentsQuery, UpdateCommentInput } from './comments.schemas';
+import type {
+    CreateCommentInput,
+    ListCommentsQuery,
+    ListRepliesQuery,
+    UpdateCommentInput,
+} from './comments.schemas';
 
 type CommentRef = NonNullable<Request['comment']>;
 
@@ -179,4 +184,21 @@ export async function listProjectComments(
     });
 
     return { data: rows, meta: buildPageMeta(total, query.page, query.limit) };
+}
+
+export async function listReplies(
+    projectId: string,
+    commentId: string,
+    query: ListRepliesQuery,
+): Promise<CommentListResult> {
+    const comment = await commentRepository.findCommentRef({ projectId, commentId });
+    if (!comment) {
+        throw new NotFoundError('Comment');
+    }
+    if (comment.parentId !== null) {
+        throw new ValidationError([
+            { path: 'commentId', message: 'Comment is a reply to another comment.' },
+        ]);
+    }
+    return listProjectComments(projectId, { ...query, parentId: commentId });
 }

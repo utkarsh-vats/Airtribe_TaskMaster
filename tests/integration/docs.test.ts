@@ -139,7 +139,7 @@ describe('GET /openapi.json', () => {
         await expect(SwaggerParser.validate(broken)).rejects.toThrow();
     });
 
-    it('documents all 44 operations, tagged, with bearer auth except the public ones', async () => {
+    it('documents all 45 operations, tagged, with bearer auth except the public ones', async () => {
         const doc = await fetchSpec();
         const paths = isObject(doc.paths) ? doc.paths : {};
         const publicOps: string[] = [];
@@ -161,7 +161,7 @@ describe('GET /openapi.json', () => {
             }
         }
 
-        expect(count).toBe(44);
+        expect(count).toBe(45);
         expect([...tags].sort()).toEqual(
             [
                 'AI',
@@ -250,7 +250,7 @@ describe('route drift guard', () => {
         expect(routes).toContain(
             'GET /api/v1/projects/{projectId}/attachments/{attachmentId}/download',
         );
-        expect(routes.size).toBe(44);
+        expect(routes.size).toBe(45);
 
         const undocumented = [...routes].filter((r) => !documented.has(r)).sort();
         const unregistered = [...documented].filter((r) => !routes.has(r)).sort();

@@ -31,6 +31,12 @@ export const listCommentsQuerySchema = z.strictObject({
     order: z.enum(['asc', 'desc']).default('asc'),
 });
 
+export const listRepliesQuerySchema = z.strictObject({
+    ...paginationQuerySchema.shape,
+    order: z.enum(['asc', 'desc']).default('asc'),
+});
+
 export type CreateCommentInput = z.infer<typeof createCommentBodySchema>;
 export type UpdateCommentInput = z.infer<typeof updateCommentBodySchema>;
 export type ListCommentsQuery = z.infer<typeof listCommentsQuerySchema>;
+export type ListRepliesQuery = z.infer<typeof listRepliesQuerySchema>;

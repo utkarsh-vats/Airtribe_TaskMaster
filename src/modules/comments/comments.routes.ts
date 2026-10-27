@@ -5,6 +5,7 @@ import {
     createCommentBodySchema,
     listCommentsQuerySchema,
     updateCommentBodySchema,
+    listRepliesQuerySchema,
 } from './comments.schemas';
 import * as commentsController from './comments.controller';
 import { loadComment } from './comments.middleware';
@@ -49,4 +50,11 @@ commentsRouter.delete(
     validate({ params: commentIdParamSchema }),
     loadComment('delete'),
     commentsController.deleteComment,
+);
+
+// GET '/:commentId/replies' - fetch replies for a specific comment
+commentsRouter.get(
+    '/:commentId/replies',
+    validate({ params: commentIdParamSchema, query: listRepliesQuerySchema }),
+    commentsController.listReplies,
 );

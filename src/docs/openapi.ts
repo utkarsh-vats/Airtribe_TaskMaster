@@ -22,6 +22,7 @@ import {
 import {
     createCommentBodySchema,
     listCommentsQuerySchema,
+    listRepliesQuerySchema,
     updateCommentBodySchema,
 } from '../modules/comments/comments.schemas';
 import {
@@ -269,6 +270,25 @@ const TASK_ID_FILTER: Record<string, QueryOverride> = {
     },
 };
 
+/** Both comment lists sort by `createdAt` (then `id`), oldest first unless `order=desc`. */
+const COMMENT_ORDER: QueryOverride = {
+    description: '`asc` (default) for oldest first, `desc` for newest first.',
+};
+
+const COMMENT_LIST_DOCS: Record<string, QueryOverride> = {
+    ...TASK_ID_FILTER,
+    parentId: {
+        description:
+            "`none` for top-level comments only, or a comment id for that comment's replies. Omit for all.",
+    },
+    order: COMMENT_ORDER,
+};
+
+const COMMENT_REPLIES_DOCS: Record<string, QueryOverride> = {
+    ...PAGINATION_DOCS,
+    order: COMMENT_ORDER,
+};
+
 interface OperationSpec {
     operationId: string;
     tag: string;
@@ -334,10 +354,19 @@ const commentFields: JsonObject = {
     projectId: uuid,
     taskId: { ...nullable(uuid), description: 'Null for a project-level comment.' },
     authorId: uuid,
+    parentId: {
+        ...nullable(uuid),
+        description: 'The comment this replies to; null for a top-level comment.',
+    },
     body: str,
     editedAt: nullable(dateTime),
     createdAt: dateTime,
     author: ref('UserSummary'),
+    replyCount: {
+        type: 'integer',
+        minimum: 0,
+        description: 'Direct replies to this comment; always 0 for a reply.',
+    },
 };
 const projectSummaryFields: JsonObject = {
     id: uuid,
@@ -510,7 +539,12 @@ const bodies = {
     createInvitation: withProperties(jsonSchema(createInvitationBodySchema), { email: EMAIL }),
     createTask: jsonSchema(createTaskBodySchema),
     updateTask: atLeastOne(jsonSchema(updateTaskBodySchema)),
-    createComment: jsonSchema(createCommentBodySchema),
+    createComment: withProperties(jsonSchema(createCommentBodySchema), {
+        parentId: {
+            description:
+                "Reply to this top-level comment. The reply takes the parent's `taskId`; null or omitted for a top-level comment.",
+        },
+    }),
     updateComment: jsonSchema(updateCommentBodySchema),
     taskDescription: jsonSchema(taskDescriptionBodySchema),
 };
@@ -912,8 +946,12 @@ function buildPaths(): JsonObject {
             post: operation({
                 operationId: 'createComment',
                 tag: 'Comments',
-                summary: 'Comment on the project or one of its tasks',
-                description: "Any member. A `taskId` that isn't in this project → 404.",
+                summary: 'Comment on the project or one of its tasks, or reply to a comment',
+                description: [
+                    "Any member. A `taskId` that isn't in this project → 404.",
+                    '',
+                    "**Replies** (`parentId`): one level only, so replying to a reply → 422. A reply inherits the parent's `taskId`; an explicit `taskId` that differs from the parent's → 422. A parent that is missing or in another project → 404.",
+                ].join('\n'),
                 requestBody: jsonBody(bodies.createComment),
                 responses: {
                     201: okResponse('The new comment', ref('Comment')),
@@ -924,8 +962,9 @@ function buildPaths(): JsonObject {
                 operationId: 'listComments',
                 tag: 'Comments',
                 summary: 'List comments',
-                description: 'Any member. Oldest first.',
-                parameters: queryParams(listCommentsQuerySchema, TASK_ID_FILTER),
+                description:
+                    "Any member. Oldest first by default; order=desc for newest first. parentId=none → top-level comments only; parentId=<id> → that comment's replies.",
+                parameters: queryParams(listCommentsQuerySchema, COMMENT_LIST_DOCS),
                 responses: {
                     200: pageResponse('A page of comments', ref('Comment')),
                     ...errors(401, 404, 422),
@@ -962,8 +1001,24 @@ function buildPaths(): JsonObject {
                 operationId: 'deleteComment',
                 tag: 'Comments',
                 summary: 'Delete a comment',
-                description: 'Author or ADMIN+.',
+                description:
+                    'Author or ADMIN+. Deleting a top-level comment also deletes its replies.',
                 responses: { 204: noContent('Deleted'), ...errors(401, 403, 404, 422) },
+            }),
+        },
+        [`${projectPath}/comments/{commentId}/replies`]: {
+            parameters: [PROJECT_ID, pathParam('commentId', 'Top-level comment id')],
+            get: operation({
+                operationId: 'listCommentReplies',
+                tag: 'Comments',
+                summary: "List a comment's replies",
+                description:
+                    'Any member. Oldest first by default; order=desc for newest first. A comment that is missing or in another project → 404; a comment that is itself a reply → 422 on `commentId`. Unknown query params → 422.',
+                parameters: queryParams(listRepliesQuerySchema, COMMENT_REPLIES_DOCS),
+                responses: {
+                    200: pageResponse('A page of replies', ref('Comment')),
+                    ...errors(401, 404, 422),
+                },
             }),
         },
 
