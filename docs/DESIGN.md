@@ -70,6 +70,7 @@ erDiagram
     PROJECTS ||--o{ COMMENTS : "contains"
     TASKS |o--o{ COMMENTS : "optionally on"
     USERS ||--o{ COMMENTS : "authored"
+    COMMENTS |o--o{ COMMENTS : "replies to"
     PROJECTS ||--o{ ATTACHMENTS : "contains"
     TASKS |o--o{ ATTACHMENTS : "optionally on"
     USERS ||--o{ ATTACHMENTS : "uploaded"
@@ -138,6 +139,7 @@ erDiagram
         uuid project_id FK
         uuid task_id FK "nullable = project-level"
         uuid author_id FK
+        uuid parent_id FK "nullable = top-level"
         text body
         timestamptz edited_at "nullable"
         timestamptz created_at
@@ -171,6 +173,7 @@ erDiagram
 - **Ownership** is a membership role, not a column on `projects`. A partial unique index guarantees exactly one OWNER per project. `projects.created_by` is kept for audit only.
 - **Tasks** belong to exactly one project. `assignee_id` is nullable and must reference a current member of that project.
 - **Comments and attachments** always belong to a project. `task_id` is optional: null means project-level, set means task-level. A composite FK `(task_id, project_id) → tasks(id, project_id)` makes it impossible for a comment to point at a task in a different project.
+- **Replies** are comments with `parent_id` set. A composite FK `(parent_id, project_id) → comments(id, project_id)` keeps a reply in its parent's project; one-level nesting and the inherited `task_id` are enforced in the service.
 - **Notifications** keep plain `project_id`/`task_id` columns (no FKs) plus a JSON snapshot, so history survives when a task or project is deleted.
 
 ---
@@ -222,9 +225,11 @@ erDiagram
 
 ### comments
 
-- Task-level comments cascade-delete with the task; project-level comments cascade with the project.
+- Task-level comments cascade-delete with the task; project-level comments cascade with the project. Replies cascade-delete with their parent.
 - Edit sets `edited_at`. Edit is author only; delete is author or ADMIN/OWNER.
-- Index `(project_id, task_id, created_at)`.
+- Replies are one level deep: the parent must be a top-level comment in the same project (404 if missing, 422 if it's a reply). A reply takes its parent's `task_id`; an explicit different `taskId` → 422.
+- `@@unique([id, project_id])` is the target for the reply composite FK.
+- Indexes: `(project_id, task_id, created_at)`, `(parent_id, created_at)`.
 
 ### attachments
 
@@ -377,15 +382,16 @@ Unknown params and invalid values → 422. `GET /users/me/tasks` takes the same 
 
 ### Comments
 
-| Method | Path                                       | Notes                                                                                                                                                                       |
-| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/projects/:projectId/comments`            | any member; `{ body, taskId? }`; `body` trimmed, 1–5000; `taskId` not in this project → 404                                                                                 |
-| GET    | `/projects/:projectId/comments`            | any member sees all comments; `?taskId=<uuid>` for one task (404 if not in this project), `?taskId=none` for project-level only; oldest first (`id` breaks ties); paginated |
-| GET    | `/projects/:projectId/comments/:commentId` | any member; the comment plus `task { id, title, description } \| null` and `project { id, name }`                                                                           |
-| PATCH  | `/projects/:projectId/comments/:commentId` | author only (ADMIN/OWNER can't edit others'); `{ body }`; sets `editedAt`                                                                                                   |
-| DELETE | `/projects/:projectId/comments/:commentId` | author or ADMIN+                                                                                                                                                            |
+| Method | Path                                               | Notes                                                                                                                                                                                                                                                                                   |
+| ------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/projects/:projectId/comments`                    | any member; `{ body, taskId?, parentId? }`; `body` trimmed, 1–5000; `taskId` not in this project → 404; `parentId` rules in §4                                                                                                                                                          |
+| GET    | `/projects/:projectId/comments`                    | any member sees all comments; `?taskId=<uuid>` for one task (404 if not in this project), `?taskId=none` for project-level only; `?parentId=none` for top-level only, `?parentId=<id>` for that comment's replies; oldest first (`?order=desc` for newest; `id` breaks ties); paginated |
+| GET    | `/projects/:projectId/comments/:commentId/replies` | any member; that top-level comment's replies, oldest first (`?order=desc` for newest), paginated; missing or another project's → 404; a reply's id → 422; params other than `page`, `limit`, `order` → 422                                                                              |
+| GET    | `/projects/:projectId/comments/:commentId`         | any member; the comment plus `task { id, title, description } \| null` and `project { id, name }`                                                                                                                                                                                       |
+| PATCH  | `/projects/:projectId/comments/:commentId`         | author only (ADMIN/OWNER can't edit others'); `{ body }`; sets `editedAt`                                                                                                                                                                                                               |
+| DELETE | `/projects/:projectId/comments/:commentId`         | author or ADMIN+; deleting a top-level comment deletes its replies                                                                                                                                                                                                                      |
 
-POST, PATCH and list items return the comment fields (`id, projectId, taskId, authorId, body, editedAt, createdAt`) plus `author { id, name }`. List query params other than `taskId`, `page`, `limit` → 422. A comment from another project → 404. PATCH and DELETE check, in order: comment exists in this project (404) → permission (403) → body (422).
+POST, PATCH, detail and list items return the comment fields (`id, projectId, taskId, parentId, authorId, body, editedAt, createdAt`) plus `author { id, name }` and `replyCount` (direct replies; always 0 for a reply). List query params other than `taskId`, `parentId`, `order`, `page`, `limit` → 422. A comment from another project → 404. PATCH and DELETE check, in order: comment exists in this project (404) → permission (403) → body (422).
 
 ### Attachments
 
@@ -477,10 +483,13 @@ Implementation: an `AppError` base class with subclasses (`NotFoundError`, `Forb
    | `task.completed`            | task creator, assignee                     | `TASK_COMPLETED`     |
    | `task.updated`              | task creator, assignee                     | `TASK_UPDATED`       |
    | `comment.created` (task)    | task creator, assignee                     | `COMMENT_ADDED`      |
-   | `comment.created` (project) | nobody                                     | —                    |
+   | `comment.created` (reply)   | the parent comment's author                | `COMMENT_REPLY`      |
+   | `comment.created` (project) | nobody, unless it's a reply                | —                    |
    | `invitation.created`        | the account with that email, if one exists | `PROJECT_INVITATION` |
 
-   It inserts the rows, then pushes each to the recipient's open SSE streams. The `payload` is a snapshot taken at event time, so later renames don't rewrite history: `actor { id, name }`, `project { id, name }`, `task { id, title }` for task events, plus `changedFields`, `commentId` + `commentPreview` (first 140 characters), or `invitationId` + `role`.
+   A reply on a task also sends `COMMENT_ADDED` to the task's creator and assignee, except the parent's author, who gets only the `COMMENT_REPLY`. If the parent is gone by the time the event is handled, no `COMMENT_REPLY` is sent.
+
+   It inserts the rows, then pushes each to the recipient's open SSE streams. The `payload` is a snapshot taken at event time, so later renames don't rewrite history: `actor { id, name }`, `project { id, name }`, `task { id, title }` for task events, plus `changedFields`, `commentId` + `commentPreview` (first 140 characters; replies add `parentId`), or `invitationId` + `role`. A reply on a task comment includes `task { id, title }`; a reply on a project-level comment has no `task`.
 
 5. Registration is idempotent (`createApp()` calls it; tests build many apps).
 6. SSE: `GET /notifications/stream` sends `text/event-stream` with `Cache-Control: no-cache`, `X-Accel-Buffering: no`, an initial `event: ready`, then `id: <notificationId>` / `event: notification` / `data: <json>` frames, and a `: ping` comment every 25 s to keep proxies from closing idle connections. Registry: `Map<userId, Set<Response>>`; a response is removed (and its timer cleared) on `close`. On shutdown, `closeAllStreams()` ends every stream before `server.close()` so they don't block a graceful exit.
@@ -584,7 +593,7 @@ taskmaster/
   - Permissions: non-member → 404; MEMBER deleting someone else's task → 403; ADMIN removing ADMIN → 403; owner leaving → 409.
   - Tasks: assign to non-member → 422/409; complete sets `completed_at`; reopen clears it; each filter, sort, `q`, pagination meta; `/users/me/tasks` spans projects.
   - Invitations: duplicate pending → 409; accept adds membership; wrong user accepting → 404; expired → 410 `INVITATION_EXPIRED`.
-  - Comments/attachments: `taskId` from another project → 404; oversize upload → 413; bad MIME → 415.
+  - Comments/attachments: `taskId` from another project → 404; reply to a reply → 422; oversize upload → 413; bad MIME → 415.
   - Member removal unassigns their tasks.
 - **CI:** GitHub Actions with a `postgres:18.3` service container → install → `prisma migrate deploy` → lint → typecheck → test.
 
@@ -704,6 +713,7 @@ enum NotificationType {
   TASK_COMPLETED
   COMMENT_ADDED
   PROJECT_INVITATION
+  COMMENT_REPLY
 }
 
 model User {
@@ -829,16 +839,23 @@ model Comment {
   projectId String    @map("project_id") @db.Uuid
   taskId    String?   @map("task_id") @db.Uuid
   authorId  String    @map("author_id") @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
   body      String
   editedAt  DateTime? @map("edited_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // Composite FK: a task-level comment must point at a task in the same project.
-  task    Task?   @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Cascade)
-  author  User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  task    Task?     @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  // Composite FK: a reply's parent must be in the same project. One-level nesting and
+  // matching taskId are enforced in the service.
+  parent  Comment?  @relation("CommentReplies", fields: [parentId, projectId], references: [id, projectId], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
 
+  @@unique([id, projectId])
   @@index([projectId, taskId, createdAt])
+  @@index([parentId, createdAt])
   @@map("comments")
 }
 

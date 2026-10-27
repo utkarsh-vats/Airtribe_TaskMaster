@@ -992,6 +992,365 @@
 					"name": "Comments",
 					"item": [
 						{
+							"name": "Replies",
+							"item": [
+								{
+									"name": "Create_Reply",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.collectionVariables.set(\"project_reply_id1\", pm.response.json().data.id)"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"body\": \"Reply test to test comment on project\",\r\n    \"parentId\": \"{{project_comment_id1}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments"
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "Create_Nested_Reply_Fail",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\r\n    \"body\": \"Reply test to ReplyComment - should fail 422\",\r\n    \"parentId\": \"{{project_reply_id1}}\"\r\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+													"host": [
+														"{{v1_url}}"
+													],
+													"path": [
+														"projects",
+														"{{project_id1}}",
+														"comments"
+													]
+												}
+											},
+											"status": "Unprocessable Entity",
+											"code": 422,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "X-Request-Id",
+													"value": "7387ff25-a01e-4c41-93a4-d1af271a3c95"
+												},
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "203"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"cb-nRk1BFUBqadPcxbsww2bAxqZZP4\""
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 27 Oct 2026 15:36:41 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Request validation failed\",\n        \"details\": [\n            {\n                \"path\": \"parentId\",\n                \"message\": \"Nested comments are not allowed.\"\n            }\n        ],\n        \"requestId\": \"7387ff25-a01e-4c41-93a4-d1af271a3c95\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "Create_Reply_On_Task_Comment",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.collectionVariables.set(\"task_reply_id1\", pm.response.json().data.id)"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"body\": \"This is a test Reply for task with id - '{{task_id1}}`.\",\r\n    \"taskId\": \"{{task_id1}}\",\r\n    \"parentId\": \"{{comment_id1}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get_Comment_Replies",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{access_token}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}/replies",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments",
+												"{{comment_id1}}",
+												"replies"
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "Get_Comment_Replies",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}/replies",
+													"host": [
+														"{{v1_url}}"
+													],
+													"path": [
+														"projects",
+														"{{project_id1}}",
+														"comments",
+														"{{comment_id1}}",
+														"replies"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "X-Request-Id",
+													"value": "3099d818-6140-43ea-b499-e97f546bf32c"
+												},
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "543"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"21f-nIwGz/zRdjyWb4koZHIhLpVSaoA\""
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 27 Oct 2026 15:35:00 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"data\": [\n        {\n            \"id\": \"6fa6175f-5ce7-4048-a650-9a1b48e0e03e\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"body\": \"This is a test Reply for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:32:45.578Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
 							"name": "Create_Comment",
 							"event": [
 								{
@@ -1020,7 +1379,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"body\": \"This is a test comment.\"\r\n}",
+									"raw": "{\r\n    \"body\": \"Generating a test comment for project\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -1131,6 +1490,16 @@
 											"key": "limit",
 											"value": "",
 											"disabled": true
+										},
+										{
+											"key": "parentId",
+											"value": "{{project_comment_id1}}",
+											"disabled": true
+										},
+										{
+											"key": "order",
+											"value": "desc",
+											"disabled": true
 										}
 									]
 								}
@@ -1142,23 +1511,19 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "http://localhost:3000/api/v1/projects//comments?taskId=a107f7b1-8775-4f1e-ab19-175a791886ba",
-											"protocol": "http",
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments?taskId={{task_id1}}",
 											"host": [
-												"localhost"
+												"{{v1_url}}"
 											],
-											"port": "3000",
 											"path": [
-												"api",
-												"v1",
 												"projects",
-												"",
+												"{{project_id1}}",
 												"comments"
 											],
 											"query": [
 												{
 													"key": "taskId",
-													"value": "a107f7b1-8775-4f1e-ab19-175a791886ba"
+													"value": "{{task_id1}}"
 												},
 												{
 													"key": "page",
@@ -1382,6 +1747,268 @@
 									],
 									"cookie": [],
 									"body": "{\n    \"data\": [\n        {\n            \"id\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"body\": \"This is a test comment for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:02:55.573Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        },\n        {\n            \"id\": \"93017f5b-219d-41ae-a00d-0acbe97d99ab\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"body\": \"This is a test comment.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:03:14.340Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 2,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Comments_From_ParentId",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments?parentId={{project_comment_id1}}",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "parentId",
+													"value": "{{project_comment_id1}}"
+												},
+												{
+													"key": "order",
+													"value": "asc",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "6f2b78e0-c3a0-4415-b605-42af99e9e94c"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "467"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1d3-UJt9ISV12XSnpO4tZcWXOL5CcqQ\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 27 Oct 2026 15:33:44 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"98040a35-c53e-4a65-8ab3-35d82807df57\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": \"0ffe12ab-7d25-4007-aa71-5147aaffff31\",\n            \"body\": \"Reply test to test comment on project\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:32:26.047Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+								},
+								{
+									"name": "Get_Comments_Order_Descending",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments?order=desc",
+											"host": [
+												"{{v1_url}}"
+											],
+											"path": [
+												"projects",
+												"{{project_id1}}",
+												"comments"
+											],
+											"query": [
+												{
+													"key": "taskId",
+													"value": "{{task_id1}}",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "",
+													"disabled": true
+												},
+												{
+													"key": "parentId",
+													"value": "{{project_comment_id1}}",
+													"disabled": true
+												},
+												{
+													"key": "order",
+													"value": "desc"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Request-Id",
+											"value": "f6f29daa-ae58-44ae-8e71-9378e15bbcdb"
+										},
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "2442"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"98a-8aukG0OmNDrcCsvKu87Q6F/hjRE\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 27 Oct 2026 15:38:00 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"data\": [\n        {\n            \"id\": \"6fa6175f-5ce7-4048-a650-9a1b48e0e03e\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"body\": \"This is a test Reply for task with id - '2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc`.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:32:45.578Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        },\n        {\n            \"id\": \"98040a35-c53e-4a65-8ab3-35d82807df57\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": \"0ffe12ab-7d25-4007-aa71-5147aaffff31\",\n            \"body\": \"Reply test to test comment on project\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:32:26.047Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        },\n        {\n            \"id\": \"0ffe12ab-7d25-4007-aa71-5147aaffff31\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": null,\n            \"body\": \"Reply test to test comment on project\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:27:11.319Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 1\n        },\n        {\n            \"id\": \"89a4e613-dc8c-47ea-b7e9-427966d68e7a\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": null,\n            \"body\": \"Generating a test comment for project\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-27T15:08:39.059Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        },\n        {\n            \"id\": \"93017f5b-219d-41ae-a00d-0acbe97d99ab\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": null,\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": null,\n            \"body\": \"This is a test comment.\",\n            \"editedAt\": null,\n            \"createdAt\": \"2026-10-20T23:03:14.340Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 0\n        },\n        {\n            \"id\": \"0da202b2-ac79-4a2b-8709-7a7f6c2a9c97\",\n            \"projectId\": \"058fa618-5983-40cb-a035-d3173e1d4fa6\",\n            \"taskId\": \"2c94bdba-d3df-4cf4-b8fd-dfc5e3fed0bc\",\n            \"authorId\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n            \"parentId\": null,\n            \"body\": \"Updated comment\",\n            \"editedAt\": \"2026-10-20T23:17:57.018Z\",\n            \"createdAt\": \"2026-10-20T23:02:55.573Z\",\n            \"author\": {\n                \"id\": \"6f981356-863e-4cf6-baff-22306e27955f\",\n                \"name\": \"test user1\"\n            },\n            \"replyCount\": 1\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 20,\n        \"total\": 6,\n        \"totalPages\": 1\n    }\n}"
 								}
 							]
 						},
@@ -1420,19 +2047,15 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "http://localhost:3000/api/v1/projects//comments/",
-											"protocol": "http",
+											"raw": "{{v1_url}}/projects/{{project_id1}}/comments/{{comment_id1}}",
 											"host": [
-												"localhost"
+												"{{v1_url}}"
 											],
-											"port": "3000",
 											"path": [
-												"api",
-												"v1",
 												"projects",
-												"",
+												"{{project_id1}}",
 												"comments",
-												""
+												"{{comment_id1}}"
 											]
 										}
 									},
@@ -3890,7 +4513,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"title\": \"Add CSV export\",\r\n    \"notes\": \"Admins only; include archived tasks\"\r\n}",
+							"raw": "{\r\n    \"title\": \"Test\",\r\n    \"notes\": \"Admins only; This is to test if the AI backend logic is working\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -4050,6 +4673,40 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "docs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/docs",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"docs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "openapi",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/openapi.json",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"openapi.json"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -4136,11 +4793,11 @@
 		},
 		{
 			"key": "comment_id1",
-			"value": ""
+			"value": "0da202b2-ac79-4a2b-8709-7a7f6c2a9c97"
 		},
 		{
 			"key": "project_comment_id1",
-			"value": ""
+			"value": "93017f5b-219d-41ae-a00d-0acbe97d99ab"
 		},
 		{
 			"key": "project_attachment_id1",
@@ -4156,6 +4813,14 @@
 		},
 		{
 			"key": "notification_id1",
+			"value": ""
+		},
+		{
+			"key": "project_reply_id1",
+			"value": ""
+		},
+		{
+			"key": "task_reply_id1",
 			"value": ""
 		}
 	]

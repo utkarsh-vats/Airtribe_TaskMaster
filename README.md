@@ -23,7 +23,7 @@ All paths are under `/api/v1`.
 | 7   | Assign a task to a team member                       | `assigneeId` on `POST /projects/:projectId/tasks` or `PATCH /projects/:projectId/tasks/:taskId`                                      |
 | 8   | Filter tasks by status                               | `GET /projects/:projectId/tasks?status=OPEN,IN_PROGRESS` (also on `/users/me/tasks`)                                                 |
 | 9   | Search tasks by title or description                 | `GET /projects/:projectId/tasks?q=…` (also on `/users/me/tasks`)                                                                     |
-| 10  | Comment on tasks and attach files                    | `/projects/:projectId/comments` and `/projects/:projectId/attachments` (with `taskId`, or project-level without)                     |
+| 10  | Comment on tasks and attach files                    | `/projects/:projectId/comments` and `/projects/:projectId/attachments` (with `taskId`, or project-level without); `parentId` replies |
 | 11  | Create a team (project) and invite members           | `POST /projects`, `POST /projects/:projectId/invitations`, `GET /users/me/invitations`, `POST /invitations/:invitationId/accept`     |
 | 12  | Log out                                              | `POST /auth/logout` (this session), `POST /auth/logout-all` (every session)                                                          |
 | 13  | Notifications (optional)                             | `GET /notifications`, `GET /notifications/stream` (SSE), `PATCH /notifications/:notificationId/read`, `POST /notifications/read-all` |
@@ -47,6 +47,7 @@ erDiagram
     PROJECTS ||--o{ COMMENTS : "contains"
     TASKS |o--o{ COMMENTS : "optionally on"
     USERS ||--o{ COMMENTS : "authored"
+    COMMENTS |o--o{ COMMENTS : "replies to"
     PROJECTS ||--o{ ATTACHMENTS : "contains"
     TASKS |o--o{ ATTACHMENTS : "optionally on"
     USERS ||--o{ ATTACHMENTS : "uploaded"
@@ -115,6 +116,7 @@ erDiagram
         uuid project_id FK
         uuid task_id FK "nullable = project-level"
         uuid author_id FK
+        uuid parent_id FK "nullable = top-level"
         text body
         timestamptz edited_at "nullable"
         timestamptz created_at
@@ -209,11 +211,12 @@ Interactive docs: http://localhost:3000/docs (raw spec at /openapi.json). The sp
 | GET    | `/api/v1/projects/:projectId/tasks/:taskId`                      | member                      | —                                                                         | 200 task with `assignee`, `createdBy`, `commentCount`, `attachmentCount`                                                |
 | PATCH  | `/api/v1/projects/:projectId/tasks/:taskId`                      | creator, assignee or ADMIN+ | any of `title, description, dueDate, priority, status, assigneeId`        | 200 task; `{ "status": "COMPLETED" }` completes it                                                                      |
 | DELETE | `/api/v1/projects/:projectId/tasks/:taskId`                      | creator or ADMIN+           | —                                                                         | 204; deletes its comments and attachments                                                                               |
-| POST   | `/api/v1/projects/:projectId/comments`                           | member                      | `{ body, taskId? }` (no `taskId` = project-level comment)                 | 201 comment with `author { id, name }`                                                                                  |
-| GET    | `/api/v1/projects/:projectId/comments?taskId=&page=&limit=`      | member                      | —                                                                         | 200 comments, oldest first, paginated; `taskId=<uuid>` for one task, `taskId=none` for project-level only               |
+| POST   | `/api/v1/projects/:projectId/comments`                           | member                      | `{ body, taskId?, parentId? }` (no `taskId` = project-level comment)      | 201 comment with `author { id, name }`, `parentId`, `replyCount`                                                        |
+| GET    | `/api/v1/projects/:projectId/comments?taskId=&parentId=&order=`  | member                      | —                                                                         | 200 comments, oldest first (`order=desc` for newest), paginated; `taskId` and `parentId` filters below                  |
 | GET    | `/api/v1/projects/:projectId/comments/:commentId`                | member                      | —                                                                         | 200 comment with `author`, `task` and `project` summaries                                                               |
+| GET    | `/api/v1/projects/:projectId/comments/:commentId/replies`        | member                      | —                                                                         | 200 that top-level comment's replies, oldest first (`order=desc` for newest), paginated; a reply's id → 422             |
 | PATCH  | `/api/v1/projects/:projectId/comments/:commentId`                | author                      | `{ body }`                                                                | 200 comment; sets `editedAt`                                                                                            |
-| DELETE | `/api/v1/projects/:projectId/comments/:commentId`                | author or ADMIN+            | —                                                                         | 204                                                                                                                     |
+| DELETE | `/api/v1/projects/:projectId/comments/:commentId`                | author or ADMIN+            | —                                                                         | 204; deleting a top-level comment deletes its replies                                                                   |
 | POST   | `/api/v1/projects/:projectId/attachments`                        | member                      | `multipart/form-data`: `file`, optional `taskId`                          | 201 `{ id, originalName, mimeType, sizeBytes, taskId, createdAt, uploadedBy }`                                          |
 | GET    | `/api/v1/projects/:projectId/attachments?taskId=&page=&limit=`   | member                      | —                                                                         | 200 attachment metadata, newest first, paginated; `taskId` as for comments                                              |
 | GET    | `/api/v1/projects/:projectId/attachments/:attachmentId`          | member                      | —                                                                         | 200 attachment metadata                                                                                                 |
@@ -250,6 +253,8 @@ Tasks without a due date always sort last. Example: `GET /api/v1/projects/:proje
 
 Comment `body` is trimmed, 1–5000 characters. A `taskId` that isn't in the project returns 404, both when posting and when filtering.
 
+**Replies:** post a comment with `parentId` to reply to a top-level comment. Threads are one level deep: replying to a reply returns 422. A reply takes its parent's `taskId`; sending a different `taskId` returns 422, and a parent that doesn't exist in the project returns 404. Every comment carries `parentId` (`null` for top-level) and `replyCount` (always 0 for a reply). On the list, `parentId=none` returns top-level comments only and `parentId=<id>` returns that comment's replies; `GET …/comments/:commentId/replies` does the same for one thread and accepts only `page`, `limit` and `order`.
+
 Attachments: one file per upload, in the form field `file`, up to `MAX_UPLOAD_MB` (10 MB; over → 413). Allowed types: PNG, JPEG, GIF, WebP, PDF, plain text, CSV, zip, Word and Excel (anything else → 415). The type is the one the client declares; the file contents aren't inspected. The original filename is kept for display and downloads only; files are stored under random server-generated names.
 
 The full API is in [DESIGN.md §7](docs/DESIGN.md#7-api).
@@ -261,7 +266,7 @@ Every project has exactly one OWNER; other members are ADMIN or MEMBER. Anyone w
 - **Roles:** only the OWNER changes roles, and nobody can change their own (409). Setting someone's role to `OWNER` transfers ownership: the current owner becomes ADMIN in the same transaction.
 - **Leaving and removal:** any member can leave except the OWNER, who must transfer ownership first (409). ADMINs can remove MEMBERs; the OWNER can remove ADMINs and MEMBERs. A removed or departing member's open tasks are unassigned; completed tasks, comments and attachments stay.
 - **Tasks:** any member can create tasks and read everything in the project. A task can be updated by its creator, its assignee or an ADMIN+, and deleted by its creator or an ADMIN+. Completing a task records `completedAt`; reopening clears it.
-- **Comments:** any member can comment on the project or on one of its tasks, and read all comments. Only the author can edit a comment (not even the OWNER); the author or an ADMIN+ can delete it. Deleting a task deletes its comments.
+- **Comments:** any member can comment on the project or on one of its tasks, and read all comments. Only the author can edit a comment (not even the OWNER); the author or an ADMIN+ can delete it. Deleting a task deletes its comments; deleting a top-level comment deletes its replies.
 - **Attachments:** any member can upload to the project or one of its tasks, list and download. The uploader or an ADMIN+ can delete an attachment. Deleting a task or project also deletes its attachments' files.
 - **Invitations** go to an email address, so the invitee doesn't need an account yet: they see the invite under `/users/me/invitations` once registered with that email. ADMINs can invite MEMBERs; only the OWNER can invite ADMINs. One pending invitation per email per project (409 otherwise), and none for existing members (409).
 - **Expiry** is checked when used: a pending invitation past its expiry date shows as `EXPIRED` in lists and filters, and accepting or declining it returns 410 `INVITATION_EXPIRED`. Accepting someone else's invitation returns 404, so its existence isn't revealed.
@@ -302,10 +307,10 @@ Every response carries an `X-Request-Id` header (an incoming one is reused), mat
 
 ### Postman collection
 
-[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (46 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments and Attachments, Invitations, Notifications, AI, plus `health`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
+[`Airtribe_TaskMaster.postman_collection.json`](Airtribe_TaskMaster.postman_collection.json) has a request for every endpoint above (51 requests in folders: Auth, Users, Projects with Members and Invitations, Tasks, Comments (with Replies) and Attachments, Invitations, Notifications, AI, plus `health`, `docs` and `openapi`). Import it into Postman; it uses collection variables, with `base_url` defaulting to `http://localhost:3000`.
 
 - `Auth_Login` stores `access_token`, `refresh_token` and `user_id1`; every other request sends `Bearer {{access_token}}`.
-- Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`, `Upload_Attachment` → `project_attachment_id1`, `Upload_Attachment_For_Task` → `task_attachment_id1`, and `Get_Notifications` → `notification_id1` (the newest notification).
+- Create requests store the new id for the requests after them: `Create_Project` → `project_id1`, `Create_Task` → `task_id1`, `Create_Invitation` → `invitation_id1`, `Create_Comment` → `project_comment_id1`, `Create_Comment_For_Task` → `comment_id1`, `Create_Reply` (to `project_comment_id1`) → `project_reply_id1`, `Create_Reply_On_Task_Comment` (to `comment_id1`) → `task_reply_id1`, `Upload_Attachment` → `project_attachment_id1`, `Upload_Attachment_For_Task` → `task_attachment_id1`, and `Get_Notifications` → `notification_id1` (the newest notification).
 - `Generate_Task_Description` calls whichever AI provider `.env` configures (see [Configuration](#configuration)); with none configured it returns 503, and with one it spends real API credit.
 - `Notifications_Stream` opens the SSE stream; Postman shows each event as it arrives. Notifications go to the _other_ users involved, so open the stream as one user and act as another.
 - The upload requests send form-data with a `file` field. After importing, pick a file from your machine for that field (the saved one lives in the author's Postman workspace).
@@ -321,9 +326,10 @@ You get a notification when someone else acts on something that involves you. Yo
 | A task is completed                               | its creator and assignee | `TASK_COMPLETED`     |
 | A task's other fields change                      | its creator and assignee | `TASK_UPDATED`       |
 | Someone comments on a task                        | its creator and assignee | `COMMENT_ADDED`      |
+| Someone replies to your comment                   | the parent's author      | `COMMENT_REPLY`      |
 | You're invited to a project (and have an account) | you                      | `PROJECT_INVITATION` |
 
-One task update produces one notification type: assignment beats completion, which beats other changes. Project-level comments don't notify anyone. Each notification's `payload` keeps the names as they were at the time (`actor`, `project`, `task`, plus `changedFields`, a comment preview, or the invited role).
+One task update produces one notification type: assignment beats completion, which beats other changes. A reply notifies the parent comment's author with `COMMENT_REPLY` (also for project-level comments) and the task's creator and assignee with `COMMENT_ADDED`; someone who qualifies for both gets only the `COMMENT_REPLY`. Other project-level comments don't notify anyone. Each notification's `payload` keeps the names as they were at the time (`actor`, `project`, `task`, plus `changedFields`, a comment preview (and `parentId` for a reply), or the invited role).
 
 **Live updates (SSE):** `GET /api/v1/notifications/stream` keeps the connection open and sends `event: notification` with the notification as JSON whenever a new one is created, plus a `: ping` comment every 25 s. Anything missed while disconnected is in `GET /api/v1/notifications`.
 
